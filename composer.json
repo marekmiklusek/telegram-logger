@@ -1,0 +1,29 @@
+{
+    "name": "marekmiklusek/telegram-logger",
+    "description": "A Laravel package to send logs to Telegram.",
+    "version": "v1.0.0",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Marek Miklusek",
+            "email": "marek.miklusek@gmail.com"
+        }
+    ],
+    "minimum-stability": "dev",
+    "require": {
+        "php": "^8.2",
+        "laravel/framework": "^11.31"
+    },
+    "autoload": {
+        "psr-4": {
+            "MarekMiklusek\\TelegramLogger\\": "src"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "MarekMiklusek\\TelegramLogger\\TelegramLoggerServiceProvider"
+            ]
+        }
+    }
+}
