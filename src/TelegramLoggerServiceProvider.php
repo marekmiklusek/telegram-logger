@@ -23,9 +23,6 @@ class TelegramLoggerServiceProvider extends ServiceProvider
     {
         $configName = 'telegram-logger';
 
-        // Call the config name anywhere in the package
-        // $this->app->singleton('configName', fn() => $configName);
-
         // Publish config
         $this->publishes([
             __DIR__ . "/../config/{$configName}.php" => config_path("{$configName}.php"),
@@ -34,10 +31,9 @@ class TelegramLoggerServiceProvider extends ServiceProvider
         // Merge config, use the package's config file as a fallback when the config file is not published
         $this->mergeConfigFrom(__DIR__ . "/../config/{$configName}.php", $configName);
 
-        // Listen for all logs and filter based on level
-        Event::listen(MessageLogged::class, function ($event) {
-            dd($event);
-            TelegramLogger::send($event->message, $event->level, $event->context);
+        // Listen for log events
+        Event::listen(MessageLogged::class, function (MessageLogged $event) {
+            TelegramLogger::send($event->level, $event->message, $event->context);
         });
     }
 }
