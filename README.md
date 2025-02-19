@@ -1,3 +1,4 @@
+![0_XXYbO3M6uX8bVCb8](https://github.com/user-attachments/assets/636b8335-b071-43cb-8405-0ec4e9fa400e)
 # 📢 Laravel Telegram Logger
 
 🚀 **Laravel Telegram Logger** is a package that sends **Laravel log messages** and **exceptions** to **Telegram** for real-time monitoring.
