@@ -97,8 +97,8 @@ The package listens to Laravel's logging events and sends structured messages to
 ### Example Telegram Log Output
 
 ```
-🏗️ Application: MyLaravelApp
-🚨 Environment: production
+🛠️ Application: MyLaravelApp
+🌍 Environment: production
 
 ❌ Level: ERROR
 📝 Message: "User not found"
@@ -118,12 +118,12 @@ The package listens to Laravel's logging events and sends structured messages to
 ### Example Telegram Log Output (Exception)
 
 ```
-🏗️ Application: MyLaravelApp
-🚨 Environment: production
+🛠️ Application: MyLaravelApp
+🌍 Environment: production
 
 ❌ Level: ERROR
-💥 Exception Occurred
-⚠️ Exception Message: "Database connection failed!"
+🔥 Exception Occurred !
+⚡ Exception Message: "Database connection failed!"
 
 📌 File:
 `/var/www/html/app/Services/DatabaseService.php:87`
