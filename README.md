@@ -1,3 +1,5 @@
+![blog-featured-how-to-delete-telegram](https://github.com/user-attachments/assets/78d2e1ec-7b2d-4e59-9b07-45a08aec6a56)
+
 # 📢 Laravel Telegram Logger
 
 🚀 **Laravel Telegram Logger** is a package that sends **Laravel log messages** and **exceptions** to **Telegram** for real-time monitoring.
