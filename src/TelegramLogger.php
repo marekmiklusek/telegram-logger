@@ -2,38 +2,12 @@
 
 namespace MarekMiklusek\TelegramLogger;
 
+use MarekMiklusek\TelegramLogger\Enums\LevelEnum;
 use Throwable;
 
 final class TelegramLogger
 {
-    /**
-     * Log levels
-     */
-    private static array $logLevels = [
-        'emergency' => 0,
-        'alert'     => 1,
-        'critical'  => 2,
-        'error'     => 3,
-        'warning'   => 4,
-        'notice'    => 5,
-        'info'      => 6,
-        'debug'     => 7,
-    ];
-
-    /**
-     * Log level emojis
-     */
-    private static $levelEmoji = [
-        'emergency' => '🆘', 
-        'alert'     => '🚨',
-        'critical'  => '🚑',
-        'error'     => '❌',
-        'warning'   => '⚠️',
-        'notice'    => '🔔',
-        'info'      => 'ℹ️',
-        'debug'     => '🔍',
-    ];
-
+    
     /**
      * Send log message or exception to Telegram
      */
@@ -49,21 +23,23 @@ final class TelegramLogger
         if (! $isEnabled) return;
 
         // Ensure levels exist
-        if (! isset(self::$logLevels[$level]) || ! isset(self::$logLevels[$configuredLevel])) {
+        if (! LevelEnum::tryFrom($level) || ! LevelEnum::tryFrom($configuredLevel)) {
             return;
         }
 
         // Only log if the event level is equal or more severe than the configured level
         // If .env is set to: TELEGRAM_LOG_LEVEL=error, only error, critical, alert, and emergency will be logged
         // If .env is set to: TELEGRAM_LOG_LEVEL=debug, all levels will be logged
-        if (self::$logLevels[$level] > self::$logLevels[$configuredLevel]) {
+        if (LevelEnum::tryFrom($level)->value > LevelEnum::tryFrom($configuredLevel)->value) {
             return;
         }
 
         $text = "🛠️ *Application:* `" . config('app.name') . "`\n";
         $text .= "🌍 *Environment:* `" . config('app.env') . "`\n\n";        
 
-        $levelIcon = self::$levelEmoji[$level] ?? '📛';
+        $levelEnum = LevelEnum::tryFrom($level);
+        $levelIcon = $levelEnum ? $levelEnum->getEmoji() : '📛';
+
         $text .= "{$levelIcon} *Level:* `" . strtoupper($level) . "`\n";
 
         // Handle Exception in context
