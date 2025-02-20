@@ -26,12 +26,12 @@ final class TelegramLogger
     private static $levelEmoji = [
         'emergency' => '🆘', 
         'alert'     => '🚨',
-        'critical'  => '⛔',
+        'critical'  => '🚑',
         'error'     => '❌',
         'warning'   => '⚠️',
-        'notice'    => '🔷',
+        'notice'    => '🔔',
         'info'      => 'ℹ️',
-        'debug'     => '🐛',
+        'debug'     => '🔍',
     ];
 
     /**
@@ -60,8 +60,8 @@ final class TelegramLogger
             return;
         }
 
-        $text = "🏗️ *Application:* `" . config('app.name') . "`\n";
-        $text .= "🚨 *Environment:* `" . config('app.env') . "`\n\n";
+        $text = "🛠️ *Application:* `" . config('app.name') . "`\n";
+        $text .= "🌍 *Environment:* `" . config('app.env') . "`\n\n";        
 
         $levelIcon = self::$levelEmoji[$level] ?? '📛';
         $text .= "{$levelIcon} *Level:* `" . strtoupper($level) . "`\n";
@@ -76,8 +76,9 @@ final class TelegramLogger
                 $text .= "📝 *Message:* `{$message}`\n\n";
             }
 
-            $text .= "💥 *Exception Occurred*\n";
-            $text .= "⚠️ *Exception Message:* `" . $exception->getMessage() . "`\n\n";
+            $text .= "🔥 *Exception Occurred \!*\n";
+            $text .= "⚡ *Exception Message:* `" . $exception->getMessage() . "`\n\n";
+
             $text .= "📌 *File:* ```copy\n{$escapedFilePath}```\n\n";
 
         // Handle normal log message
@@ -86,7 +87,7 @@ final class TelegramLogger
             $text .= "📌 *File:* ```copy\n" . self::getLogSource() . "```\n\n";
 
             if (! empty($context)) {
-                $text .= "📂 *Context:* ```" . json_encode($context, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "```\n\n";
+                $text .= "📂 *Context:* ```".json_encode($context, JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES)."```\n\n";
             }
         }
 
