@@ -123,7 +123,7 @@ The package listens to Laravel's logging events and sends structured messages to
 
 ❌ Level: ERROR
 🔥 Exception Occurred !
-⚡ Exception Message: "Database connection failed!"
+💥 Message: "Database connection failed!"
 
 📌 File:
 `/var/www/html/app/Services/DatabaseService.php:87`
