@@ -69,7 +69,20 @@ final class TelegramLogger
         // Handle Exception in context
         if (isset($context['exception']) && $context['exception'] instanceof Throwable) {
             $exception = $context['exception'];
-            $escapedFilePath = self::normalizeFilePath($exception->getFile() . ':' . $exception->getLine());
+
+            // Split the message at ", called in" if it exists
+            $hasCalledIn = strpos($exception->getMessage(), ', called in') !== false;
+            if ($hasCalledIn) {
+                $parts = explode(', called in', $exception->getMessage());
+                $errorMessage = $parts[0];
+                $calledInPath = trim($parts[1]);
+
+                // Remove the "on line" part from calledInPath and format with colon
+                $filePath = preg_replace('/\s+on\s+line\s+(\d+)$/', ':$1', $calledInPath);
+            } else {
+                $errorMessage = $exception->getMessage();
+                $filePath = $exception->getFile() . ':' . $exception->getLine();
+            }
 
             // Only show the message if it's different from the exception message
             if ($message !== $exception->getMessage()) {
@@ -77,12 +90,9 @@ final class TelegramLogger
             }
 
             $text .= "🔥 *Exception Occurred \!*\n";
-            $text .= "💥 *Message:* `" . self::normalizeFilePath($exception->getMessage()) . "`\n\n";
+            $text .= "💥 *Message:* `" . self::normalizeFilePath($errorMessage) . ($hasCalledIn ? ', called in:' : '') . "`\n\n";
 
-            // Only add the File section if the file path isn't already in the exception message
-            if (strpos($exception->getMessage(), $exception->getFile()) === false) {
-                $text .= "📌 *File:* ```copy\n{$escapedFilePath}```\n\n";
-            }
+            $text .= "📌 *File:* ```copy\n" . self::normalizeFilePath($filePath) . "```\n\n";
 
         // Handle normal log message
         } else {
