@@ -89,10 +89,10 @@ final class TelegramLogger
                 $text .= "📝 *Message:* `{$message}`\n\n";
             }
 
-            $text .= "🔥 *" . self::escapeMarkdownV2Text('Exception Occurred !') . "*\n";
-            $text .= "💥 *Message:* `" . self::escapeMarkdownV2Text($errorMessage) . ($hasCalledIn ? ', called in:' : '') . "`\n\n";
+            $text .= "🔥 *" . self::escapeSpecialChars('Exception Occurred !') . "*\n";
+            $text .= "💥 *Message:* `" . self::escapeSpecialChars($errorMessage) . ($hasCalledIn ? ', called in:' : '') . "`\n\n";
 
-            $text .= "📌 *File:* ```copy\n" . self::escapeMarkdownV2Text($filePath) . "```\n\n";
+            $text .= "📌 *File:* ```copy\n" . self::escapeSpecialChars($filePath) . "```\n\n";
 
             // Handle normal log message
         } else {
@@ -132,7 +132,7 @@ final class TelegramLogger
         foreach ($trace as $item) {
             if (! isset($item['file'])) continue;
 
-            $filePath = self::escapeMarkdownV2Text($item['file']);
+            $filePath = self::escapeSpecialChars($item['file']);
 
             // Exclude Laravel core, vendor files and TelegramLogger
             if (
@@ -152,7 +152,7 @@ final class TelegramLogger
      * 
      * @see https://core.telegram.org/bots/api#markdownv2-style
      */
-    private static function escapeMarkdownV2Text(string $text): string
+    private static function escapeSpecialChars(string $text): string
     {
         $specialChars = ['_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!'];
 
