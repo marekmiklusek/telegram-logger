@@ -89,12 +89,12 @@ final class TelegramLogger
                 $text .= "📝 *Message:* `{$message}`\n\n";
             }
 
-            $text .= "🔥 *Exception Occurred \!*\n";
-            $text .= "💥 *Message:* `" . self::normalizeFilePath($errorMessage) . ($hasCalledIn ? ', called in:' : '') . "`\n\n";
+            $text .= "🔥 *" . self::escapeMarkdownV2Text('Exception Occurred !') . "*\n";
+            $text .= "💥 *Message:* `" . self::escapeMarkdownV2Text($errorMessage) . ($hasCalledIn ? ', called in:' : '') . "`\n\n";
 
-            $text .= "📌 *File:* ```copy\n" . self::normalizeFilePath($filePath) . "```\n\n";
+            $text .= "📌 *File:* ```copy\n" . self::escapeMarkdownV2Text($filePath) . "```\n\n";
 
-        // Handle normal log message
+            // Handle normal log message
         } else {
             $text .= "📝 *Message:* `{$message}`\n\n";
             $text .= "📌 *File:* ```copy\n" . self::getLogSource() . "```\n\n";
@@ -116,6 +116,12 @@ final class TelegramLogger
         file_get_contents($url);
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Private static functions
+    |--------------------------------------------------------------------------
+    */
+
     /**
      * Get the source of the log message
      */
@@ -126,7 +132,7 @@ final class TelegramLogger
         foreach ($trace as $item) {
             if (! isset($item['file'])) continue;
 
-            $filePath = self::normalizeFilePath($item['file']);
+            $filePath = self::escapeMarkdownV2Text($item['file']);
 
             // Exclude Laravel core, vendor files and TelegramLogger
             if (
@@ -142,10 +148,21 @@ final class TelegramLogger
     }
 
     /**
-     * Normalize file path
+     * Escapes special characters in text for Telegram's MarkdownV2 format
+     * 
+     * @see https://core.telegram.org/bots/api#markdownv2-style
      */
-    private static function normalizeFilePath(string $filePath): string
+    private static function escapeMarkdownV2Text(string $text): string
     {
-        return str_replace('\\', '/', $filePath);
+        $specialChars = ['_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!'];
+
+        // Replace backslashes with forward slashes (for Windows paths)
+        $text = str_replace('\\', '/', $text);
+
+        foreach ($specialChars as $char) {
+            $text = str_replace($char, '\\' . $char, $text);
+        }
+
+        return $text;
     }
 }
