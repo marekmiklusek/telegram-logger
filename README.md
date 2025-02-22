@@ -142,7 +142,7 @@ return [
 ];
 ```
 
-✅ If `true`, logs will be sent to Telegram as configured
+✅ If `true`, logs will be sent to Telegram as configured  
 ✅ If `false`, the logger will be completely disabled (no logs sent)
 
 ### 2️⃣ Log Level Filtering
