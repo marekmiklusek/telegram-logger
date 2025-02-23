@@ -113,9 +113,9 @@ final class TelegramLogger
 
                 // Exclude Laravel core, vendor files and TelegramLogger
                 if (
-                    ! str_contains($filePath, 'vendor\\') &&
-                    ! str_contains($filePath, 'Illuminate\\') &&
-                    ! str_contains($filePath, 'marekmiklusek\\')
+                    ! str_contains($filePath, 'vendor') &&
+                    ! str_contains($filePath, 'Illuminate') &&
+                    ! str_contains($filePath, 'TelegramLogger')
                 ) {
                     $text .= "📌 *File:* ```\n" . $filePath . "```\n";
                     $text .= "🎯 *Line:* `" . $item['line'] . "`\n\n";
