@@ -60,51 +60,75 @@ final class TelegramLogger
             return;
         }
 
-        $text = "🛠️ *Application:* `" . config('app.name') . "`\n";
-        $text .= "🌍 *Environment:* `" . config('app.env') . "`\n\n";
+        $text = "🛠️ *Application:* " . self::escapeSpecialChars(config('app.name')) . "\n";
+        $text .= "🌍 *Environment:* " . self::escapeSpecialChars(config('app.env')) . "\n\n";
 
         $levelIcon = self::$levelEmoji[$level] ?? '📛';
-        $text .= "{$levelIcon} *Level:* `" . strtoupper($level) . "`\n";
+        $text .= "{$levelIcon} *Level:* " . strtoupper($level) . "\n";
 
         // Handle Exception in context
         if (isset($context['exception']) && $context['exception'] instanceof Throwable) {
             $exception = $context['exception'];
+            $calledInPosition = strpos($exception->getMessage(), ', called in');
 
-            // Split the message at ", called in" if it exists
-            $hasCalledIn = strpos($exception->getMessage(), ', called in') !== false;
-            if ($hasCalledIn) {
-                $parts = explode(', called in', $exception->getMessage());
-                $errorMessage = $parts[0];
-                $calledInPath = trim($parts[1]);
+            if ($calledInPosition !== false) {
+                // Extract the clean error message without the "called in" part
+                $errorMessage = substr($exception->getMessage(), 0, $calledInPosition);
 
-                // Remove the "on line" part from calledInPath and format with colon
-                $filePath = preg_replace('/\s+on\s+line\s+(\d+)$/', ':$1', $calledInPath);
+                // Extract and format the file path from the "called in" part
+                $calledInPath = substr($exception->getMessage(), $calledInPosition + 11); // +11 to skip ", called in"
+
+                // Split at "on line" to get the file path and line number
+                list($filePath, $lineNumber) = explode(' on line ', trim($calledInPath));
             } else {
                 $errorMessage = $exception->getMessage();
-                $filePath = $exception->getFile() . ':' . $exception->getLine();
+                $filePath = $exception->getFile();
+                $lineNumber = $exception->getLine();
             }
+
+            // Format the file path in exception message
+            $errorMessage = self::formatPath($errorMessage);
 
             // Only show the message if it's different from the exception message
             if ($message !== $exception->getMessage()) {
                 $text .= "📝 *Message:* `{$message}`\n\n";
             }
 
-            $text .= "🔥 *" . self::escapeSpecialChars('Exception Occurred !') . "*\n";
-            $text .= "💥 *Message:* `" . self::escapeSpecialChars($errorMessage) . ($hasCalledIn ? ', called in:' : '') . "`\n\n";
+            $text .= "🔥 *Exception Occurred \\!*\n";
+            $text .= "💥 *Message:* `{$errorMessage}`\n\n";
 
-            $text .= "📌 *File:* ```copy\n" . self::escapeSpecialChars($filePath) . "```\n\n";
+            $text .= "📌 *File:* ```\n" . self::formatPath($filePath) . "```\n";
+            $text .= "🎯 *Line:* `{$lineNumber}`\n\n";
 
-            // Handle normal log message
+        // Handle normal log message
         } else {
             $text .= "📝 *Message:* `{$message}`\n\n";
-            $text .= "📌 *File:* ```copy\n" . self::getLogSource() . "```\n\n";
+
+            $trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 15);
+
+            foreach ($trace as $item) {
+                if (! isset($item['file'])) continue;
+
+                $filePath = self::formatPath($item['file']);
+
+                // Exclude Laravel core, vendor files and TelegramLogger
+                if (
+                    ! str_contains($filePath, 'vendor\\') &&
+                    ! str_contains($filePath, 'Illuminate\\') &&
+                    ! str_contains($filePath, 'marekmiklusek\\')
+                ) {
+                    $text .= "📌 *File:* ```\n" . $filePath . "```\n";
+                    $text .= "🎯 *Line:* `" . $item['line'] . "`\n\n";
+                    break;
+                }
+            }
 
             if (! empty($context)) {
-                $text .= "📂 *Context:* ```" . json_encode($context, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "```\n\n";
+                $text .= "📂 *Context:* ```\n" . json_encode($context, JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES) . "```\n\n";
             }
         }
 
-        $text .= "⏳ *Time:* `" . date('Y-m-d H:i:s') . "`";
+        $text .= "⏳ *Time:* " . self::escapeSpecialChars(date('Y-m-d H:i:s')) . "";
 
         $url = "https://api.telegram.org/bot{$botToken}/sendMessage?" . http_build_query([
             'chat_id' => $chatId,
@@ -123,41 +147,22 @@ final class TelegramLogger
     */
 
     /**
-     * Get the source of the log message
+     * Replace backslashes with double backslashes for Windows paths
      */
-    private static function getLogSource(): string
+    private static function formatPath(string $path): string
     {
-        $trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 15);
-
-        foreach ($trace as $item) {
-            if (! isset($item['file'])) continue;
-
-            $filePath = self::escapeSpecialChars($item['file']);
-
-            // Exclude Laravel core, vendor files and TelegramLogger
-            if (
-                ! str_contains($filePath, 'vendor/') &&
-                ! str_contains($filePath, 'Illuminate/') &&
-                ! str_contains($filePath, 'TelegramLogger')
-            ) {
-                return $filePath . ':' . $item['line'];
-            }
-        }
-
-        return 'Unknown';
+        return str_replace('\\', '\\\\', $path);
     }
 
     /**
-     * Escapes special characters in text for Telegram's MarkdownV2 format
+     * In plaintext, special characters are escaped for Telegram's MarkdownV2.
+     * When using backticks to indicate a copied text, escaping is not needed.
      * 
      * @see https://core.telegram.org/bots/api#markdownv2-style
      */
     private static function escapeSpecialChars(string $text): string
     {
         $specialChars = ['_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!'];
-
-        // Replace backslashes with forward slashes (for Windows paths)
-        $text = str_replace('\\', '/', $text);
 
         foreach ($specialChars as $char) {
             $text = str_replace($char, '\\' . $char, $text);

@@ -104,7 +104,8 @@ The package listens to Laravel's logging events and sends structured messages to
 📝 Message: "User not found"
 
 📌 File:
-`/var/www/html/app/Http/Controllers/UserController.php:45`
+/var/www/html/app/Http/Controllers/UserController.php
+🎯 Line: 45
 
 📂 Context:
 {
@@ -126,7 +127,8 @@ The package listens to Laravel's logging events and sends structured messages to
 💥 Message: "Database connection failed!"
 
 📌 File:
-`/var/www/html/app/Services/DatabaseService.php:87`
+/var/www/html/app/Services/DatabaseService.php
+🎯 Line: 87
 
 ⏳ Time: 2025-02-19 10:18:45
 ```
