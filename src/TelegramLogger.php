@@ -95,14 +95,14 @@ final class TelegramLogger
             }
 
             $text .= "🔥 *Exception Occurred \\!*\n";
-            $text .= "💥 *Message:* `{$errorMessage}`\n\n";
+            $text .= "💥 *Message:* `" . self::escapeSpecialChars($errorMessage) . "`\n\n";
 
             $text .= "📌 *File:* ```\n" . self::formatPath($filePath) . "```\n";
             $text .= "🎯 *Line:* `{$lineNumber}`\n\n";
 
         // Handle normal log message
         } else {
-            $text .= "📝 *Message:* `{$message}`\n\n";
+            $text .= "📝 *Message:* `" . self::escapeSpecialChars($message) . "`\n\n";
 
             $trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 15);
 
@@ -124,7 +124,7 @@ final class TelegramLogger
             }
 
             if (! empty($context)) {
-                $text .= "📂 *Context:* ```\n" . json_encode($context, JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES) . "```\n\n";
+                $text .= "📂 *Context:* ```\n" . json_encode($context, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "```\n\n";
             }
         }
 
@@ -155,14 +155,13 @@ final class TelegramLogger
     }
 
     /**
-     * In plaintext, special characters are escaped for Telegram's MarkdownV2.
-     * When using backticks to indicate a copied text, escaping is not needed.
+     * Escape special characters in the text to prevent MarkdownV2 formatting issues
      * 
      * @see https://core.telegram.org/bots/api#markdownv2-style
      */
     private static function escapeSpecialChars(string $text): string
     {
-        $specialChars = ['_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!'];
+        $specialChars = ['_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!', '?', ':'];
 
         foreach ($specialChars as $char) {
             $text = str_replace($char, '\\' . $char, $text);
