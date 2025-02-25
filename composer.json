@@ -1,7 +1,7 @@
 {
     "name": "marekmiklusek/telegram-logger",
     "description": "A Laravel package to send logs to Telegram.",
-    "version": "v1.0.6",
+    "version": "v1.0.7",
     "license": "MIT",
     "authors": [
         {
