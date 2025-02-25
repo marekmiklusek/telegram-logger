@@ -91,7 +91,7 @@ final class TelegramLogger
 
             // Only show the message if it's different from the exception message
             if ($message !== $exception->getMessage()) {
-                $text .= "📝 *Message:* `{$message}`\n\n";
+                $text .= "📝 *Message:* `" . self::escapeSpecialChars($message) . "`\n\n";
             }
 
             $text .= "🔥 *Exception Occurred \\!*\n";
