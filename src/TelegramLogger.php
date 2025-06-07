@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace MarekMiklusek\TelegramLogger;
 
 use Throwable;
@@ -11,13 +13,13 @@ final class TelegramLogger
      */
     private static array $logLevels = [
         'emergency' => 0,
-        'alert'     => 1,
-        'critical'  => 2,
-        'error'     => 3,
-        'warning'   => 4,
-        'notice'    => 5,
-        'info'      => 6,
-        'debug'     => 7,
+        'alert' => 1,
+        'critical' => 2,
+        'error' => 3,
+        'warning' => 4,
+        'notice' => 5,
+        'info' => 6,
+        'debug' => 7,
     ];
 
     /**
@@ -25,13 +27,13 @@ final class TelegramLogger
      */
     private static $levelEmoji = [
         'emergency' => '🆘',
-        'alert'     => '🚨',
-        'critical'  => '🚑',
-        'error'     => '❌',
-        'warning'   => '⚠️',
-        'notice'    => '🔔',
-        'info'      => 'ℹ️',
-        'debug'     => '🔍',
+        'alert' => '🚨',
+        'critical' => '🚑',
+        'error' => '❌',
+        'warning' => '⚠️',
+        'notice' => '🔔',
+        'info' => 'ℹ️',
+        'debug' => '🔍',
     ];
 
     /**
@@ -46,7 +48,9 @@ final class TelegramLogger
         $isEnabled = config('telegram-logger.is_enabled');
 
         // Ensure the logger is enabled
-        if (! $isEnabled) return;
+        if (! $isEnabled) {
+            return;
+        }
 
         // Ensure levels exist
         if (! isset(self::$logLevels[$level]) || ! isset(self::$logLevels[$configuredLevel])) {
@@ -60,11 +64,11 @@ final class TelegramLogger
             return;
         }
 
-        $text = "🛠️ *Application:* " . self::escapeSpecialChars(config('app.name')) . "\n";
-        $text .= "🌍 *Environment:* " . self::escapeSpecialChars(config('app.env')) . "\n\n";
+        $text = '🛠️ *Application:* '.self::escapeSpecialChars(config('app.name'))."\n";
+        $text .= '🌍 *Environment:* '.self::escapeSpecialChars(config('app.env'))."\n\n";
 
         $levelIcon = self::$levelEmoji[$level] ?? '📛';
-        $text .= "{$levelIcon} *Level:* " . strtoupper($level) . "\n";
+        $text .= "{$levelIcon} *Level:* ".strtoupper($level)."\n";
 
         // Handle Exception in context
         if (isset($context['exception']) && $context['exception'] instanceof Throwable) {
@@ -79,7 +83,7 @@ final class TelegramLogger
                 $calledInPath = substr($exception->getMessage(), $calledInPosition + 11); // +11 to skip ", called in"
 
                 // Split at "on line" to get the file path and line number
-                list($filePath, $lineNumber) = explode(' on line ', trim($calledInPath));
+                [$filePath, $lineNumber] = explode(' on line ', trim($calledInPath));
             } else {
                 $errorMessage = $exception->getMessage();
                 $filePath = $exception->getFile();
@@ -91,23 +95,23 @@ final class TelegramLogger
 
             // Only show the message if it's different from the exception message
             if ($message !== $exception->getMessage()) {
-                $text .= "📝 *Message:* `" . self::escapeSpecialChars($message) . "`\n\n";
+                $text .= '📝 *Message:* `'.self::escapeSpecialChars($message)."`\n\n";
             }
 
             $text .= "🔥 *Exception Occurred \\!*\n";
-            $text .= "💥 *Message:* `" . self::escapeSpecialChars($errorMessage) . "`\n\n";
+            $text .= '💥 *Message:* `'.self::escapeSpecialChars($errorMessage)."`\n\n";
+            $text .= "📌 *File:* ```\n".self::formatPath($filePath).":{$lineNumber}```\n\n";
 
-            $text .= "📌 *File:* ```\n" . self::formatPath($filePath) . "```\n";
-            $text .= "🎯 *Line:* `{$lineNumber}`\n\n";
-
-        // Handle normal log message
+            // Handle normal log message
         } else {
-            $text .= "📝 *Message:* `" . self::escapeSpecialChars($message) . "`\n\n";
+            $text .= '📝 *Message:* `'.self::escapeSpecialChars($message)."`\n\n";
 
             $trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 15);
 
             foreach ($trace as $item) {
-                if (! isset($item['file'])) continue;
+                if (! isset($item['file'])) {
+                    continue;
+                }
 
                 $filePath = self::formatPath($item['file']);
 
@@ -117,20 +121,19 @@ final class TelegramLogger
                     ! str_contains($filePath, 'Illuminate') &&
                     ! str_contains($filePath, 'TelegramLogger')
                 ) {
-                    $text .= "📌 *File:* ```\n" . $filePath . "```\n";
-                    $text .= "🎯 *Line:* `" . $item['line'] . "`\n\n";
+                    $text .= "📌 *File:* ```\n".$filePath.":".$item['line']."```\n\n";
                     break;
                 }
             }
 
             if (! empty($context)) {
-                $text .= "📂 *Context:* ```\n" . json_encode($context, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "```\n\n";
+                $text .= "📂 *Context:* ```\n".json_encode($context, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)."```\n\n";
             }
         }
 
-        $text .= "⏳ *Time:* " . self::escapeSpecialChars(date('Y-m-d H:i:s')) . "";
+        $text .= '⏳ *Time:* '.self::escapeSpecialChars(date('Y-m-d H:i:s')).'';
 
-        $url = "https://api.telegram.org/bot{$botToken}/sendMessage?" . http_build_query([
+        $url = "https://api.telegram.org/bot{$botToken}/sendMessage?".http_build_query([
             'chat_id' => $chatId,
             'text' => $text,
             'parse_mode' => 'MarkdownV2',
@@ -156,7 +159,7 @@ final class TelegramLogger
 
     /**
      * Escape special characters in the text to prevent MarkdownV2 formatting issues
-     * 
+     *
      * @see https://core.telegram.org/bots/api#markdownv2-style
      */
     private static function escapeSpecialChars(string $text): string
@@ -164,7 +167,7 @@ final class TelegramLogger
         $specialChars = ['_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!', '?', ':'];
 
         foreach ($specialChars as $char) {
-            $text = str_replace($char, '\\' . $char, $text);
+            $text = str_replace($char, '\\'.$char, $text);
         }
 
         return $text;

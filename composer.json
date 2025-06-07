@@ -1,7 +1,8 @@
 {
     "name": "marekmiklusek/telegram-logger",
     "description": "A Laravel package to send logs to Telegram.",
-    "version": "v1.0.8",
+    "type": "library",
+    "keywords": ["php", "laravel", "package", "telegram", "logger", "laravel-telegram-logger"],
     "license": "MIT",
     "authors": [
         {

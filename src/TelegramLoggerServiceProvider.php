@@ -1,12 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace MarekMiklusek\TelegramLogger;
 
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Log\Events\MessageLogged;
 
-class TelegramLoggerServiceProvider extends ServiceProvider
+final class TelegramLoggerServiceProvider extends ServiceProvider
 {
     /**
      * Register services.
@@ -25,11 +27,11 @@ class TelegramLoggerServiceProvider extends ServiceProvider
 
         // Publish config
         $this->publishes([
-            __DIR__ . "/../config/{$configName}.php" => config_path("{$configName}.php"),
+            __DIR__."/../config/{$configName}.php" => config_path("{$configName}.php"),
         ], "{$configName}-config");
 
         // Merge config, use the package's config file as a fallback when the config file is not published
-        $this->mergeConfigFrom(__DIR__ . "/../config/{$configName}.php", $configName);
+        $this->mergeConfigFrom(__DIR__."/../config/{$configName}.php", $configName);
 
         // Listen for log events
         Event::listen(MessageLogged::class, function (MessageLogged $event) {
