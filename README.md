@@ -104,8 +104,7 @@ The package listens to Laravel's logging events and sends structured messages to
 📝 Message: "User not found"
 
 📌 File:
-/var/www/html/app/Http/Controllers/UserController.php
-🎯 Line: 45
+/var/www/html/app/Http/Controllers/UserController.php:45
 
 📂 Context:
 {
