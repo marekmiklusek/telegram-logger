@@ -126,8 +126,7 @@ The package listens to Laravel's logging events and sends structured messages to
 💥 Message: "Database connection failed!"
 
 📌 File:
-/var/www/html/app/Services/DatabaseService.php
-🎯 Line: 87
+/var/www/html/app/Services/DatabaseService.php:30
 
 ⏳ Time: 2025-02-19 10:18:45
 ```
