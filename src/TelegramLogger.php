@@ -189,7 +189,7 @@ final class TelegramLogger
             'chat_id' => config()->string('telegram-logger.chat_id'),
             'text' => $text,
             'parse_mode' => 'MarkdownV2',
-            'disable_notification' => config()->bool('telegram-logger.silent_notification'),
+            'disable_notification' => config()->boolean('telegram-logger.silent_notification'),
         ];
 
         $curl = curl_init();
