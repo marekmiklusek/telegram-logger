@@ -91,7 +91,7 @@ final class TelegramLogger
 
             $text .= "🔥 *Exception Occurred \\!*\n";
             $text .= '💥 *Message:* `'.self::escapeSpecialChars($errorMessage)."`\n\n";
-            $text .= "📌 *File:* ```\n".self::formatPath($filePath).":{$lineNumber}```\n\n";
+            $text .= "📌 *File:* ```\n".self::escapeCodeBlock(self::formatPath($filePath).":{$lineNumber}")."```\n\n";
 
         } else {
             $text .= '📝 *Message:* `'.self::escapeSpecialChars($message)."`\n\n";
@@ -110,13 +110,13 @@ final class TelegramLogger
                     ! str_contains($filePath, 'Illuminate') &&
                     ! str_contains($filePath, 'TelegramLogger')
                 ) {
-                    $text .= "📌 *File:* ```\n".$filePath.":".$item['line']."```\n\n";
+                    $text .= "📌 *File:* ```\n".self::escapeCodeBlock($filePath.":".$item['line'])."```\n\n";
                     break;
                 }
             }
 
             if (! empty($context)) {
-                $text .= "📂 *Context:* ```\n".json_encode($context, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)."```\n\n";
+                $text .= "📂 *Context:* ```\n".self::escapeCodeBlock(json_encode($context, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES))."```\n\n";
             }
         }
 
@@ -222,6 +222,15 @@ final class TelegramLogger
     private static function formatPath(string $path): string
     {
         return str_replace('\\', '\\\\', $path);
+    }
+
+    /**
+     * Escape special characters for content inside code blocks (```).
+     * In MarkdownV2, only backticks and backslashes need to be escaped inside pre-formatted code.
+     */
+    private static function escapeCodeBlock(string $text): string
+    {
+        return str_replace(['\\', '`'], ['\\\\', '\\`'], $text);
     }
 
     /**
