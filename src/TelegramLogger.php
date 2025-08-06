@@ -49,6 +49,10 @@ final class TelegramLogger
         $silentNotification = config('telegram-logger.silent_notification');
         $isEnabled = config('telegram-logger.is_enabled');
 
+        if (blank($botToken) || blank($chatId)) {
+            return;
+        }
+
         // Ensure the logger is enabled
         if (! $isEnabled) return;
 
@@ -134,6 +138,11 @@ final class TelegramLogger
 
         $text .= "⏳ *Time:* " . self::escapeSpecialChars(date('Y-m-d H:i:s')) . "";
 
+        // Telegram has a 4096 character limit for messages
+        if (strlen($text) > 4096) {
+            $text = substr($text, 0, 4090) . '...';
+        }
+
         $url = "https://api.telegram.org/bot{$botToken}/sendMessage?" . http_build_query([
             'chat_id' => $chatId,
             'text' => $text,
@@ -141,7 +150,18 @@ final class TelegramLogger
             'disable_notification' => $silentNotification,
         ]);
 
-        file_get_contents($url);
+        try {
+            $context = stream_context_create([
+                'http' => [
+                    'timeout' => 10,
+                    'ignore_errors' => true,
+                ]
+            ]);
+            
+            $result = @file_get_contents($url, false, $context);
+        } catch (Throwable $throwable) {
+            //
+        }
     }
 
     /*
