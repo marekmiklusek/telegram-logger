@@ -43,15 +43,25 @@ TELEGRAM_BOT_TOKEN=your_bot_token
 TELEGRAM_CHAT_ID=your_chat_id
 ```
 
+All other options are configurable via `.env` as well:
+
+```env
+TELEGRAM_LOG_LEVEL=error
+TELEGRAM_LOG_SILENT=false
+TELEGRAM_LOG_ENABLED=true
+TELEGRAM_LOG_THROW_ON_FAILURE=false
+```
+
 ### Config File (`config/telegram-logger.php`)
 
 ```php
 return [
     'bot_token' => env('TELEGRAM_BOT_TOKEN'),
     'chat_id' => env('TELEGRAM_CHAT_ID'),
-    'level' => 'error',
-    'silent_notification' => false,
-    'is_enabled' => true,
+    'level' => env('TELEGRAM_LOG_LEVEL', 'error'),
+    'silent_notification' => (bool) env('TELEGRAM_LOG_SILENT', false),
+    'is_enabled' => (bool) env('TELEGRAM_LOG_ENABLED', true),
+    'throw_on_failure' => (bool) env('TELEGRAM_LOG_THROW_ON_FAILURE', false),
 ];
 ```
 
@@ -101,15 +111,16 @@ The package listens to Laravel's logging events and sends structured messages to
 🌍 Environment: production
 
 ❌ Level: ERROR
-📝 Message: "User not found"
+📝 Message: User not found
 
 📌 File:
-/var/www/html/app/Http/Controllers/UserController.php:45
+/var/www/html/app/Http/Controllers/UserController.php
+🎯 Line: 45
 
 📂 Context:
 {
-  "user_id": 42,
-  "action": "login"
+    "user_id": 42,
+    "action": "login"
 }
 
 ⏳ Time: 2025-02-19 10:15:30
@@ -122,11 +133,14 @@ The package listens to Laravel's logging events and sends structured messages to
 🌍 Environment: production
 
 ❌ Level: ERROR
-🔥 Exception Occurred !
-💥 Message: "Database connection failed!"
+📝 Message: Unhandled exception occurred
+
+🔥 Exception: PDOException
+💥 Message: Database connection failed!
 
 📌 File:
-/var/www/html/app/Services/DatabaseService.php:30
+/var/www/html/app/Services/DatabaseService.php
+🎯 Line: 30
 
 ⏳ Time: 2025-02-19 10:18:45
 ```
@@ -171,15 +185,32 @@ return [
 ✅ If `true`, messages will be sent silently.  
 ✅ If `false`, Telegram will send notifications normally.
 
+### 4️⃣ Failure Reporting
+
+By default a failed delivery is swallowed — a logger must never break the application:
+```php
+return [
+    'throw_on_failure' => false,
+];
+```
+
+Set `TELEGRAM_LOG_THROW_ON_FAILURE=true` locally to surface the actual Telegram API error
+(invalid token, chat not found, rate limit) instead of silence.
+
+If Telegram rejects the message formatting (HTTP 400), the package automatically retries once
+as plain text, so the log is delivered even when formatting fails.
+
 ## 💡 Troubleshooting
 
 ❓ **Logs not appearing in Telegram?**
-1. Check that your `.env` values are correctly set:
+1. Set `TELEGRAM_LOG_THROW_ON_FAILURE=true` — the real API error will be thrown.
+2. Check that your `.env` values are correctly set:
 ```bash
 php artisan config:clear
 php artisan config:cache
 ```
-2. Ensure your bot has permission to send messages to your chat.
+3. Ensure your bot has permission to send messages to your chat.
+4. Verify `TELEGRAM_LOG_LEVEL` is not more severe than the level you are logging.
 
 ❓ **Getting "Chat not found" error?**
 - Make sure you have sent a message to your bot first.
@@ -187,4 +218,4 @@ php artisan config:cache
 
 ## 📜 License
 
-This package is open-source and licensed under the [MIT License](LICENSE.md).
+This package is open-source and licensed under the [MIT License](LICENSE).

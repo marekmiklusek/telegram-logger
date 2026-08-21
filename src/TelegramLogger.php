@@ -4,14 +4,15 @@ declare(strict_types=1);
 
 namespace MarekMiklusek\TelegramLogger;
 
+use RuntimeException;
 use Throwable;
 
 final class TelegramLogger
 {
     /**
-     * Log levels.
+     * @var array<string, int>
      */
-    private static array $logLevels = [
+    public const LEVELS = [
         'emergency' => 0,
         'alert' => 1,
         'critical' => 2,
@@ -23,9 +24,9 @@ final class TelegramLogger
     ];
 
     /**
-     * Log level emojis.
+     * @var array<string, string>
      */
-    private static $levelEmoji = [
+    private const EMOJI = [
         'emergency' => '🆘',
         'alert' => '🚨',
         'critical' => '🚑',
@@ -36,161 +37,266 @@ final class TelegramLogger
         'debug' => '🔍',
     ];
 
+    private const MAX_TEXT_LENGTH = 4096;
+
+    private const MAX_MESSAGE_LENGTH = 1500;
+
+    private const ELLIPSIS = '…';
+
+    private const API_URL = 'https://api.telegram.org/bot%s/sendMessage';
+
+    private const JSON_FLAGS = JSON_PRETTY_PRINT
+        | JSON_UNESCAPED_SLASHES
+        | JSON_UNESCAPED_UNICODE
+        | JSON_INVALID_UTF8_SUBSTITUTE
+        | JSON_PARTIAL_OUTPUT_ON_ERROR;
+
+    private static bool $sending = false;
+
     /**
-     * Send log message or exception to Telegram.
-     * 
-     * @param array<string, mixed> $context
+     * @param  array<string, mixed>  $context
      */
     public static function send(string $level, string $message, array $context = []): void
     {
-        $botToken = config('telegram-logger.bot_token');
-        $chatId = config('telegram-logger.chat_id');
-        $configuredLevel = config('telegram-logger.level', 'error');
-        $silentNotification = config('telegram-logger.silent_notification');
-        $isEnabled = config('telegram-logger.is_enabled');
-
-        if (blank($botToken) || blank($chatId)) {
+        if (self::$sending) {
             return;
         }
 
-        // Ensure the logger is enabled
-        if (! $isEnabled) return;
+        self::$sending = true;
 
-        // Ensure levels exist
-        if (! isset(self::$logLevels[$level]) || ! isset(self::$logLevels[$configuredLevel])) {
-            return;
-        }
-
-        // Only log if the event level is equal or more severe than the configured level
-        // If .env is set to: TELEGRAM_LOG_LEVEL=error, only error, critical, alert, and emergency will be logged
-        // If .env is set to: TELEGRAM_LOG_LEVEL=debug, all levels will be logged
-        if (self::$logLevels[$level] > self::$logLevels[$configuredLevel]) {
-            return;
-        }
-
-        $text = "🛠️ *Application:* " . self::escapeSpecialChars(config('app.name')) . "\n";
-        $text .= "🌍 *Environment:* " . self::escapeSpecialChars(config('app.env')) . "\n\n";
-
-        $levelIcon = self::$levelEmoji[$level] ?? '📛';
-        $text .= "{$levelIcon} *Level:* " . strtoupper($level) . "\n";
-
-        // Handle Exception in context
-        if (isset($context['exception']) && $context['exception'] instanceof Throwable) {
-            $exception = $context['exception'];
-            $calledInPosition = strpos($exception->getMessage(), ', called in');
-
-            if ($calledInPosition !== false) {
-                // Extract the clean error message without the "called in" part
-                $errorMessage = substr($exception->getMessage(), 0, $calledInPosition);
-
-                // Extract and format the file path from the "called in" part
-                $calledInPath = substr($exception->getMessage(), $calledInPosition + 11); // +11 to skip ", called in"
-
-                // Split at "on line" to get the file path and line number
-                list($filePath, $lineNumber) = explode(' on line ', trim($calledInPath));
-            } else {
-                $errorMessage = $exception->getMessage();
-                $filePath = $exception->getFile();
-                $lineNumber = $exception->getLine();
+        try {
+            self::handle(strtolower($level), $message, $context);
+        } catch (Throwable $throwable) {
+            if (config()->boolean('telegram-logger.throw_on_failure', false)) {
+                throw $throwable;
             }
+        } finally {
+            self::$sending = false;
+        }
+    }
 
-            // Format the file path in exception message
-            $errorMessage = self::formatPath($errorMessage);
+    /**
+     * @param  array<string, mixed>  $context
+     */
+    private static function handle(string $level, string $message, array $context): void
+    {
+        $botToken = config()->string('telegram-logger.bot_token', '');
+        $chatId = config()->string('telegram-logger.chat_id', '');
 
-            // Only show the message if it's different from the exception message
-            if ($message !== $exception->getMessage()) {
-                $text .= "📝 *Message:* `" . self::escapeSpecialChars($message) . "`\n\n";
-            }
+        if (! config()->boolean('telegram-logger.is_enabled', true) || blank($botToken) || blank($chatId)) {
+            return;
+        }
 
-            $text .= "🔥 *Exception Occurred \\!*\n";
-            $text .= "💥 *Message:* `" . self::escapeSpecialChars($errorMessage) . "`\n\n";
+        if (! self::shouldLog($level)) {
+            return;
+        }
 
-            $text .= "📌 *File:* ```\n" . self::formatPath($filePath) . "```\n";
-            $text .= "🎯 *Line:* `{$lineNumber}`\n\n";
+        self::deliver($botToken, $chatId, self::buildText($level, $message, $context));
+    }
 
-        // Handle normal log message
+    private static function shouldLog(string $level): bool
+    {
+        if (! isset(self::LEVELS[$level])) {
+            return false;
+        }
+
+        $configured = strtolower(config()->string('telegram-logger.level', 'error'));
+
+        if (! isset(self::LEVELS[$configured])) {
+            $configured = 'error';
+        }
+
+        return self::LEVELS[$level] <= self::LEVELS[$configured];
+    }
+
+    /**
+     * @param  array<string, mixed>  $context
+     */
+    private static function buildText(string $level, string $message, array $context): string
+    {
+        $text = '🛠️ *Application:* '.self::escapeText(config()->string('app.name', ''))."\n";
+        $text .= '🌍 *Environment:* '.self::escapeText(config()->string('app.env', ''))."\n\n";
+        $text .= self::EMOJI[$level].' *Level:* '.strtoupper($level)."\n";
+
+        $footer = '⏳ *Time:* '.self::escapeText(date('Y-m-d H:i:s'));
+
+        $exception = $context['exception'] ?? null;
+
+        if ($exception instanceof Throwable) {
+            $text .= self::formatException($message, $exception);
         } else {
-            $text .= "📝 *Message:* `" . self::escapeSpecialChars($message) . "`\n\n";
-
-            $trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 15);
-
-            foreach ($trace as $item) {
-                if (! isset($item['file'])) continue;
-
-                $filePath = self::formatPath($item['file']);
-
-                // Exclude Laravel core, vendor files and TelegramLogger
-                if (
-                    ! str_contains($filePath, 'vendor') &&
-                    ! str_contains($filePath, 'Illuminate') &&
-                    ! str_contains($filePath, 'TelegramLogger')
-                ) {
-                    $text .= "📌 *File:* ```\n" . $filePath . "```\n";
-                    $text .= "🎯 *Line:* `" . $item['line'] . "`\n\n";
-                    break;
-                }
-            }
-
-            if (! empty($context)) {
-                $text .= "📂 *Context:* ```\n" . json_encode($context, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "```\n\n";
-            }
+            $text .= '📝 *Message:* `'.self::fitCode($message, self::MAX_MESSAGE_LENGTH)."`\n\n";
+            $text .= self::formatCaller();
+            $text .= self::formatContext($context, self::MAX_TEXT_LENGTH - mb_strlen($text) - mb_strlen($footer));
         }
 
-        $text .= "⏳ *Time:* " . self::escapeSpecialChars(date('Y-m-d H:i:s')) . "";
+        return $text.$footer;
+    }
 
-        // Telegram has a 4096 character limit for messages
-        if (strlen($text) > 4096) {
-            $text = substr($text, 0, 4090) . '...';
+    private static function formatException(string $message, Throwable $exception): string
+    {
+        $errorMessage = $exception->getMessage();
+        $file = $exception->getFile();
+        $line = (string) $exception->getLine();
+
+        if (preg_match('/^(.*), called in (.+) on line (\d+)$/s', $errorMessage, $matches) === 1) {
+            [, $errorMessage, $file, $line] = $matches;
         }
 
-        $url = "https://api.telegram.org/bot{$botToken}/sendMessage?" . http_build_query([
+        $text = '';
+
+        if ($message !== $exception->getMessage()) {
+            $text .= '📝 *Message:* `'.self::fitCode($message, self::MAX_MESSAGE_LENGTH)."`\n\n";
+        }
+
+        $text .= '🔥 *Exception:* `'.self::escapeCode($exception::class)."`\n";
+        $text .= '💥 *Message:* `'.self::fitCode($errorMessage, self::MAX_MESSAGE_LENGTH)."`\n\n";
+        $text .= "📌 *File:* ```\n".self::escapeCode($file)."```\n";
+        $text .= '🎯 *Line:* `'.self::escapeCode($line)."`\n\n";
+
+        return $text;
+    }
+
+    private static function formatCaller(): string
+    {
+        foreach (debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 25) as $frame) {
+            if (! isset($frame['file'])) {
+                continue;
+            }
+
+            if (
+                str_contains($frame['file'], 'vendor')
+                || str_contains($frame['file'], 'Illuminate')
+                || str_contains($frame['file'], 'TelegramLogger')
+            ) {
+                continue;
+            }
+
+            return "📌 *File:* ```\n".self::escapeCode($frame['file'])."```\n"
+                .'🎯 *Line:* `'.($frame['line'] ?? 0)."`\n\n";
+        }
+
+        return '';
+    }
+
+    /**
+     * @param  array<string, mixed>  $context
+     */
+    private static function formatContext(array $context, int $budget): string
+    {
+        if ($context === []) {
+            return '';
+        }
+
+        $prefix = "📂 *Context:* ```\n";
+        $suffix = "```\n\n";
+
+        $budget -= mb_strlen($prefix) + mb_strlen($suffix);
+
+        if ($budget < 10) {
+            return '';
+        }
+
+        $json = json_encode($context, self::JSON_FLAGS);
+
+        if ($json === false) {
+            return '';
+        }
+
+        return $prefix.self::fitCode($json, $budget).$suffix;
+    }
+
+    private static function deliver(string $botToken, string $chatId, string $text): void
+    {
+        $silent = config()->boolean('telegram-logger.silent_notification', false);
+
+        $response = self::request($botToken, [
             'chat_id' => $chatId,
             'text' => $text,
             'parse_mode' => 'MarkdownV2',
-            'disable_notification' => $silentNotification,
+            'disable_notification' => $silent,
         ]);
 
-        try {
-            $context = stream_context_create([
-                'http' => [
-                    'timeout' => 10,
-                    'ignore_errors' => true,
-                ]
-            ]);
-            
-            $result = @file_get_contents($url, false, $context);
-        } catch (Throwable $throwable) {
-            //
+        if ($response['ok'] ?? false) {
+            return;
         }
+
+        if (($response['error_code'] ?? null) === 400) {
+            $fallback = self::request($botToken, [
+                'chat_id' => $chatId,
+                'text' => mb_substr(self::stripMarkdown($text), 0, self::MAX_TEXT_LENGTH),
+                'disable_notification' => $silent,
+            ]);
+
+            if ($fallback['ok'] ?? false) {
+                return;
+            }
+
+            $response = $fallback ?? $response;
+        }
+
+        throw new RuntimeException('Telegram API request failed: '.($response['description'] ?? 'no response'));
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Private static functions
-    |--------------------------------------------------------------------------
-    */
-
     /**
-     * Replace backslashes with double backslashes for Windows paths
+     * @param  array<string, mixed>  $params
+     * @return array<string, mixed>|null
      */
-    private static function formatPath(string $path): string
+    private static function request(string $botToken, array $params): ?array
     {
-        return str_replace('\\', '\\\\', $path);
+        $context = stream_context_create([
+            'http' => [
+                'method' => 'POST',
+                'header' => "Content-Type: application/x-www-form-urlencoded\r\n",
+                'content' => http_build_query($params),
+                'timeout' => 10,
+                'ignore_errors' => true,
+            ],
+        ]);
+
+        $body = @file_get_contents(sprintf(self::API_URL, $botToken), false, $context);
+
+        if ($body === false) {
+            return null;
+        }
+
+        $decoded = json_decode($body, true);
+
+        return is_array($decoded) ? $decoded : null;
     }
 
     /**
-     * Escape special characters in the text to prevent MarkdownV2 formatting issues
-     * 
      * @see https://core.telegram.org/bots/api#markdownv2-style
      */
-    private static function escapeSpecialChars(string $text): string
+    private static function escapeText(string $text): string
     {
-        $specialChars = ['_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!', '?', ':'];
+        return preg_replace('/([_*\[\]()~`>#+\-=|{}.!\\\\])/', '\\\\$1', $text) ?? $text;
+    }
 
-        foreach ($specialChars as $char) {
-            $text = str_replace($char, '\\' . $char, $text);
+    private static function escapeCode(string $text): string
+    {
+        return str_replace(['\\', '`'], ['\\\\', '\\`'], $text);
+    }
+
+    private static function fitCode(string $raw, int $budget): string
+    {
+        if ($budget < 1) {
+            return '';
         }
 
-        return $text;
+        $escaped = self::escapeCode($raw);
+
+        while (mb_strlen($escaped) > $budget) {
+            $excess = mb_strlen($escaped) - $budget;
+            $raw = mb_substr($raw, 0, max(0, mb_strlen($raw) - $excess - 1));
+            $escaped = self::escapeCode($raw).self::ELLIPSIS;
+        }
+
+        return $escaped;
+    }
+
+    private static function stripMarkdown(string $text): string
+    {
+        return preg_replace('/\\\\([_*\[\]()~`>#+\-=|{}.!\\\\])/', '$1', $text) ?? $text;
     }
 }
