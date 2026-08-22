@@ -20,6 +20,7 @@
 
 - PHP 8.4+
 - Laravel 13.0+
+- `allow_url_fopen` enabled in `php.ini` (the default)
 
 ## 🛠 Installation
 
@@ -69,6 +70,7 @@ return [
     'silent_notification' => (bool) env('TELEGRAM_LOG_SILENT', false),
     'is_enabled' => (bool) env('TELEGRAM_LOG_ENABLED', true),
     'throw_on_failure' => (bool) env('TELEGRAM_LOG_THROW_ON_FAILURE', false),
+    'api_url' => (string) env('TELEGRAM_LOG_API_URL', 'https://api.telegram.org'),
     'max_per_minute' => (int) env('TELEGRAM_LOG_MAX_PER_MINUTE', 20),
     'dedupe_seconds' => (int) env('TELEGRAM_LOG_DEDUPE_SECONDS', 60),
     'redact_keys' => ['password', 'secret', 'token', 'authorization', 'api_key', 'apikey', 'credit_card', 'cvv'],
@@ -221,6 +223,12 @@ php artisan config:cache
 ```
 3. Ensure your bot has permission to send messages to your chat.
 4. Verify `TELEGRAM_LOG_LEVEL` is not more severe than the level you are logging.
+5. Confirm `allow_url_fopen` is enabled — without it the API cannot be reached and
+   the package throws `Telegram API is unreachable`.
+
+❓ **Behind a proxy?**
+
+Point `TELEGRAM_LOG_API_URL` at your own Bot API endpoint.
 
 ❓ **Getting "Chat not found" error?**
 - Make sure you have sent a message to your bot first.

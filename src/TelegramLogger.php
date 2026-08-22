@@ -50,7 +50,9 @@ final class TelegramLogger
 
     private const int MAX_REDACT_DEPTH = 8;
 
-    private const string API_URL = 'https://api.telegram.org/bot%s/sendMessage';
+    private const int REQUEST_TIMEOUT = 10;
+
+    private const string API_URL = 'https://api.telegram.org';
 
     private const int JSON_FLAGS = JSON_PRETTY_PRINT
         | JSON_UNESCAPED_SLASHES
@@ -382,25 +384,52 @@ final class TelegramLogger
         throw new RuntimeException('Telegram API request failed: '.($response['description'] ?? 'no response'));
     }
 
+    private static function post(string $url, string $payload): ?string
+    {
+        self::guardTransport(self::urlFopenEnabled());
+
+        $context = stream_context_create([
+            'http' => [
+                'method' => 'POST',
+                'header' => 'Content-Type: application/x-www-form-urlencoded
+',
+                'content' => $payload,
+                'timeout' => self::REQUEST_TIMEOUT,
+                'ignore_errors' => true,
+            ],
+        ]);
+
+        $body = @file_get_contents($url, false, $context);
+
+        return is_string($body) ? $body : null;
+    }
+
+    private static function urlFopenEnabled(): bool
+    {
+        return filter_var(ini_get('allow_url_fopen'), FILTER_VALIDATE_BOOL);
+    }
+
+    private static function guardTransport(bool $enabled): void
+    {
+        if (! $enabled) {
+            throw new RuntimeException(
+                'Telegram API is unreachable: allow_url_fopen is disabled in php.ini.'
+            );
+        }
+    }
+
     /**
      * @param  array<string, mixed>  $params
      * @return array{ok: bool, error_code: int|null, description: string|null}|null
      */
     private static function request(string $botToken, array $params): ?array
     {
-        $context = stream_context_create([
-            'http' => [
-                'method' => 'POST',
-                'header' => "Content-Type: application/x-www-form-urlencoded\r\n",
-                'content' => http_build_query($params),
-                'timeout' => 10,
-                'ignore_errors' => true,
-            ],
-        ]);
+        $url = self::configString('telegram-logger.api_url', self::API_URL).'/bot'.$botToken.'/sendMessage';
+        $payload = http_build_query($params);
 
-        $body = @file_get_contents(sprintf(self::API_URL, $botToken), false, $context);
+        $body = self::post($url, $payload);
 
-        if ($body === false) {
+        if ($body === null) {
             return null;
         }
 

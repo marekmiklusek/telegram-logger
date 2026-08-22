@@ -13,6 +13,7 @@ return [
      * throw_on_failure    Throw on delivery failure instead of swallowing it. Keep false in production.
      * max_per_minute      Messages sent per minute before further logs are dropped. 0 disables throttling.
      * dedupe_seconds      Window in which an identical message is sent only once. 0 disables deduplication.
+     * api_url             Base URL of the Telegram Bot API. Override it to route through a proxy.
      * redact_keys         Context keys whose values are replaced with [REDACTED]. Matched case-insensitively
      *                     as a substring, so "password" also covers "password_confirmation".
      *
@@ -26,6 +27,7 @@ return [
     'throw_on_failure' => (bool) env('TELEGRAM_LOG_THROW_ON_FAILURE', false),
     'max_per_minute' => (int) env('TELEGRAM_LOG_MAX_PER_MINUTE', 20),
     'dedupe_seconds' => (int) env('TELEGRAM_LOG_DEDUPE_SECONDS', 60),
+    'api_url' => (string) env('TELEGRAM_LOG_API_URL', 'https://api.telegram.org'),
     'redact_keys' => [
         'password',
         'secret',
