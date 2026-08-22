@@ -12,7 +12,13 @@ return RectorConfig::configure()
         __DIR__.'/src',
         __DIR__.'/tests',
     ])
-    ->withPhpSets(php84: true)
+    ->withImportNames(removeUnusedImports: true)
+    ->withCache(__DIR__.'/build/rector')
+    ->withSets([
+        SetList::INSTANCEOF,
+        SetList::NAMING,
+        LaravelSetList::LARAVEL_CODE_QUALITY,
+    ])
     ->withPreparedSets(
         deadCode: true,
         codeQuality: true,
@@ -21,10 +27,4 @@ return RectorConfig::configure()
         earlyReturn: true,
         codingStyle: true,
     )
-    ->withSets([
-        SetList::INSTANCEOF,
-        SetList::NAMING,
-        LaravelSetList::LARAVEL_CODE_QUALITY,
-    ])
-    ->withImportNames(removeUnusedImports: true)
-    ->withCache(__DIR__.'/build/rector');
+    ->withPhpSets();

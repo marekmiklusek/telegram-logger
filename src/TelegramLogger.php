@@ -313,7 +313,11 @@ final class TelegramLogger
     private static function formatFrames(array $frames): string
     {
         foreach ($frames as $frame) {
-            if (! isset($frame['file']) || self::isInternalFrame($frame['file'])) {
+            if (! isset($frame['file'])) {
+                continue;
+            }
+
+            if (self::isInternalFrame($frame['file'])) {
                 continue;
             }
 

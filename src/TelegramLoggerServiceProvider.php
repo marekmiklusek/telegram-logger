@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace MarekMiklusek\TelegramLogger;
 
+use Override;
 use InvalidArgumentException;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
@@ -13,6 +14,7 @@ final class TelegramLoggerServiceProvider extends ServiceProvider
 {
     private const string CONFIG_NAME = 'telegram-logger';
 
+    #[Override]
     public function register(): void
     {
         $this->mergeConfigFrom(__DIR__.'/../config/'.self::CONFIG_NAME.'.php', self::CONFIG_NAME);

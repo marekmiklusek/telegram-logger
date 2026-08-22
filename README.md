@@ -297,6 +297,10 @@ composer lint       # Pint
 composer refactor   # Rector
 ```
 
+## 📝 Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for release notes and upgrade instructions.
+
 ## 📜 License
 
 This package is open-source and licensed under the [MIT License](LICENSE).
