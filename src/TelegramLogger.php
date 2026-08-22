@@ -6,6 +6,7 @@ namespace MarekMiklusek\TelegramLogger;
 
 use Throwable;
 use RuntimeException;
+use Illuminate\Contracts\Cache\Repository as CacheRepository;
 
 final class TelegramLogger
 {
@@ -44,6 +45,10 @@ final class TelegramLogger
     private const int MAX_HEADER_LENGTH = 200;
 
     private const string ELLIPSIS = '…';
+
+    private const string REDACTED = '[REDACTED]';
+
+    private const int MAX_REDACT_DEPTH = 8;
 
     private const string API_URL = 'https://api.telegram.org/bot%s/sendMessage';
 
@@ -94,7 +99,129 @@ final class TelegramLogger
             return;
         }
 
-        self::deliver($botToken, $chatId, self::buildText($level, $message, $context));
+        if (self::isDuplicate($level, $message) || self::isThrottled()) {
+            return;
+        }
+
+        self::deliver($botToken, $chatId, self::buildText($level, $message, self::redact($context)));
+    }
+
+    private static function isDuplicate(string $level, string $message): bool
+    {
+        $seconds = self::configInt('telegram-logger.dedupe_seconds', 60);
+
+        if ($seconds < 1) {
+            return false;
+        }
+
+        $key = 'telegram-logger:seen:'.md5($level.'|'.$message);
+
+        return ! self::cacheAdd($key, $seconds);
+    }
+
+    private static function isThrottled(): bool
+    {
+        $limit = self::configInt('telegram-logger.max_per_minute', 20);
+
+        if ($limit < 1) {
+            return false;
+        }
+
+        $cache = self::cache();
+
+        if (! $cache instanceof CacheRepository) {
+            return false;
+        }
+
+        $key = 'telegram-logger:sent:'.floor(time() / 60);
+
+        $sent = $cache->get($key);
+        $sent = is_int($sent) ? $sent : 0;
+
+        if ($sent >= $limit) {
+            return true;
+        }
+
+        $cache->put($key, $sent + 1, 120);
+
+        return false;
+    }
+
+    /**
+     * @param  array<string, mixed>  $context
+     * @return array<string, mixed>
+     */
+    private static function redact(array $context): array
+    {
+        $keys = self::redactKeys();
+
+        if ($keys === []) {
+            return $context;
+        }
+
+        $redacted = [];
+
+        foreach ($context as $key => $value) {
+            $redacted[$key] = self::isSensitiveKey($key, $keys)
+                ? self::REDACTED
+                : (is_array($value) ? self::redactArray($value, $keys, 1) : $value);
+        }
+
+        return $redacted;
+    }
+
+    /**
+     * @param  array<mixed, mixed>  $values
+     * @param  list<string>  $keys
+     * @return array<mixed, mixed>
+     */
+    private static function redactArray(array $values, array $keys, int $depth): array
+    {
+        if ($depth > self::MAX_REDACT_DEPTH) {
+            return $values;
+        }
+
+        $redacted = [];
+
+        foreach ($values as $key => $value) {
+            if (is_string($key) && self::isSensitiveKey($key, $keys)) {
+                $redacted[$key] = self::REDACTED;
+
+                continue;
+            }
+
+            $redacted[$key] = is_array($value)
+                ? self::redactArray($value, $keys, $depth + 1)
+                : $value;
+        }
+
+        return $redacted;
+    }
+
+    /**
+     * @param  list<string>  $keys
+     */
+    private static function isSensitiveKey(string $key, array $keys): bool
+    {
+        $needle = mb_strtolower($key);
+
+        return array_any($keys, fn (string $sensitive): bool => str_contains($needle, $sensitive));
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function redactKeys(): array
+    {
+        $keys = [];
+
+        foreach (self::configArray('telegram-logger.redact_keys') as $key) {
+            if (is_string($key) && $key !== '') {
+                $keys[] = mb_strtolower($key);
+            }
+        }
+
+        return $keys;
     }
 
     private static function shouldLog(string $level): bool
@@ -288,6 +415,45 @@ final class TelegramLogger
             'error_code' => is_int($decoded['error_code'] ?? null) ? $decoded['error_code'] : null,
             'description' => is_string($decoded['description'] ?? null) ? $decoded['description'] : null,
         ];
+    }
+
+    private static function configInt(string $key, int $default): int
+    {
+        $value = config($key, $default);
+
+        return is_int($value) ? $value : $default;
+    }
+
+    /**
+     * @return array<mixed, mixed>
+     */
+    private static function configArray(string $key): array
+    {
+        $value = config($key, []);
+
+        return is_array($value) ? $value : [];
+    }
+
+    private static function cacheAdd(string $key, int $seconds): bool
+    {
+        $cache = self::cache();
+
+        if (! $cache instanceof CacheRepository) {
+            return true;
+        }
+
+        return $cache->add($key, true, $seconds);
+    }
+
+    private static function cache(): ?CacheRepository
+    {
+        try {
+            $cache = resolve('cache.store');
+
+            return $cache instanceof CacheRepository ? $cache : null;
+        } catch (Throwable) {
+            return null;
+        }
     }
 
     private static function configString(string $key, string $default = ''): string

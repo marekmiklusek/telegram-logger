@@ -55,6 +55,8 @@ TELEGRAM_LOG_LEVEL=error
 TELEGRAM_LOG_SILENT=false
 TELEGRAM_LOG_ENABLED=true
 TELEGRAM_LOG_THROW_ON_FAILURE=false
+TELEGRAM_LOG_MAX_PER_MINUTE=20
+TELEGRAM_LOG_DEDUPE_SECONDS=60
 ```
 
 ### Config File (`config/telegram-logger.php`)
@@ -67,6 +69,9 @@ return [
     'silent_notification' => (bool) env('TELEGRAM_LOG_SILENT', false),
     'is_enabled' => (bool) env('TELEGRAM_LOG_ENABLED', true),
     'throw_on_failure' => (bool) env('TELEGRAM_LOG_THROW_ON_FAILURE', false),
+    'max_per_minute' => (int) env('TELEGRAM_LOG_MAX_PER_MINUTE', 20),
+    'dedupe_seconds' => (int) env('TELEGRAM_LOG_DEDUPE_SECONDS', 60),
+    'redact_keys' => ['password', 'secret', 'token', 'authorization', 'api_key', 'apikey', 'credit_card', 'cvv'],
 ];
 ```
 
@@ -220,6 +225,43 @@ php artisan config:cache
 ❓ **Getting "Chat not found" error?**
 - Make sure you have sent a message to your bot first.
 - Use [this tool](https://telegram.me/userinfobot) to get your Chat ID.
+
+### 5️⃣ Flood Protection
+
+An error storm must not turn into hundreds of Telegram requests, so two limits apply:
+
+```php
+return [
+    'dedupe_seconds' => 60,
+    'max_per_minute' => 20,
+];
+```
+
+- `dedupe_seconds` sends an identical message only once per window
+- `max_per_minute` caps how many messages leave the application per minute
+
+Set either to `0` to disable it. Both require a working cache; when no cache is
+available they are skipped and logs are delivered as usual.
+
+### 6️⃣ Redacting Sensitive Data
+
+Context is sent to a third party, so known sensitive keys are replaced with `[REDACTED]`:
+
+```php
+Log::error('Login failed', ['email' => 'a@b.com', 'password' => 'hunter2']);
+```
+
+```
+📂 Context:
+{
+    "email": "a@b.com",
+    "password": "[REDACTED]"
+}
+```
+
+Keys are matched case-insensitively as a substring, so `password` also covers
+`password_confirmation`. Nested arrays are redacted too. Configure the list via
+`redact_keys`, or set it to `[]` to disable redaction.
 
 ## 🧪 Testing
 
