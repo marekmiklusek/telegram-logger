@@ -508,12 +508,23 @@ final class TelegramLogger
      */
     private static function escapeText(string $text): string
     {
+        $text = self::toUtf8($text);
+
         return preg_replace('/([_*\[\]()~`>#+\-=|{}.!\\\\])/', '\\\\$1', $text) ?? $text;
     }
 
     private static function escapeCode(string $text): string
     {
-        return str_replace(['\\', '`'], ['\\\\', '\\`'], $text);
+        return str_replace(['\\', '`'], ['\\\\', '\\`'], self::toUtf8($text));
+    }
+
+    private static function toUtf8(string $text): string
+    {
+        if (mb_check_encoding($text, 'UTF-8')) {
+            return $text;
+        }
+
+        return mb_convert_encoding($text, 'UTF-8', 'UTF-8');
     }
 
     private static function fitCode(string $raw, int $budget): string

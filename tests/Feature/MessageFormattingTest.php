@@ -60,6 +60,34 @@ it('keeps unicode readable in the context payload', function (): void {
     expect(sentText())->not->toContain('\u017d');
 });
 
+it('sanitises invalid utf-8 in the message', function (): void {
+    FakeTelegram::respondOk();
+
+    Log::error("binary \xB1\x31\xFF payload");
+
+    expect(mb_check_encoding(sentText(), 'UTF-8'))->toBeTrue()
+        ->and(sentText())->not->toContain("\xB1");
+});
+
+it('sanitises invalid utf-8 in an exception message', function (): void {
+    FakeTelegram::respondOk();
+
+    Log::error('broken', ['exception' => new RuntimeException("bad \xFE\xFF bytes")]);
+
+    expect(mb_check_encoding(sentText(), 'UTF-8'))->toBeTrue()
+        ->and(sentText())->not->toContain("\xFE");
+});
+
+it('sanitises invalid utf-8 in the application name', function (): void {
+    config()->set('app.name', "App \xC3\x28 name");
+
+    FakeTelegram::respondOk();
+
+    Log::error('broken app name');
+
+    expect(mb_check_encoding(sentText(), 'UTF-8'))->toBeTrue();
+});
+
 it('survives invalid utf-8 in the context payload', function (): void {
     FakeTelegram::respondOk();
 

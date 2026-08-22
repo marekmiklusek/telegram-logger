@@ -38,6 +38,10 @@ trace, and raises the minimum PHP and Laravel versions.
   because newer keys were missing.
 - A disabled `allow_url_fopen` made the package fail silently; it now throws with
   an actionable message.
+- Messages containing invalid UTF-8 arrived unformatted, because Telegram rejected
+  the MarkdownV2 payload and the package fell back to plain text. Such bytes are
+  now replaced before escaping, so formatting survives; valid characters and emoji
+  are left untouched.
 
 ### Added
 
