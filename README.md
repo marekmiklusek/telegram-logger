@@ -1,8 +1,9 @@
 ![Laravel Telegram Logger](art/banner.svg)
 
-# 📢 Laravel Telegram Logger
+# Laravel Telegram Logger
 
-🚀 **Laravel Telegram Logger** is a package that sends **Laravel log messages** and **exceptions** to **Telegram** for real-time monitoring.
+Sends Laravel log messages and exceptions to Telegram for real-time monitoring,
+with flood protection and redaction of sensitive context.
 
 ## 📌 Features
 
@@ -200,28 +201,6 @@ Set `TELEGRAM_LOG_THROW_ON_FAILURE=true` locally to surface the actual Telegram 
 If Telegram rejects the message formatting (HTTP 400), the package automatically retries once
 as plain text, so the log is delivered even when formatting fails.
 
-## 💡 Troubleshooting
-
-❓ **Logs not appearing in Telegram?**
-1. Set `TELEGRAM_LOG_THROW_ON_FAILURE=true` — the real API error will be thrown.
-2. Check that your `.env` values are correctly set:
-```bash
-php artisan config:clear
-php artisan config:cache
-```
-3. Ensure your bot has permission to send messages to your chat.
-4. Verify `TELEGRAM_LOG_LEVEL` is not more severe than the level you are logging.
-5. Confirm `allow_url_fopen` is enabled — without it the API cannot be reached and
-   the package throws `Telegram API is unreachable`.
-
-❓ **Behind a proxy?**
-
-Point `TELEGRAM_LOG_API_URL` at your own Bot API endpoint.
-
-❓ **Getting "Chat not found" error?**
-- Make sure you have sent a message to your bot first.
-- Use [this tool](https://telegram.me/userinfobot) to get your Chat ID.
-
 ### 5️⃣ Flood Protection
 
 An error storm must not turn into hundreds of Telegram requests, so two limits apply:
@@ -257,6 +236,28 @@ Log::error('Login failed', ['email' => 'a@b.com', 'password' => 'hunter2']);
 Keys are matched case-insensitively as a substring, so `password` also covers
 `password_confirmation`. Nested arrays are redacted too. Configure the list via
 `redact_keys`, or set it to `[]` to disable redaction.
+
+## 💡 Troubleshooting
+
+❓ **Logs not appearing in Telegram?**
+1. Set `TELEGRAM_LOG_THROW_ON_FAILURE=true` — the real API error will be thrown.
+2. Check that your `.env` values are correctly set:
+```bash
+php artisan config:clear
+php artisan config:cache
+```
+3. Ensure your bot has permission to send messages to your chat.
+4. Verify `TELEGRAM_LOG_LEVEL` is not more severe than the level you are logging.
+5. Confirm `allow_url_fopen` is enabled — without it the API cannot be reached and
+   the package throws `Telegram API is unreachable`.
+
+❓ **Behind a proxy?**
+
+Point `TELEGRAM_LOG_API_URL` at your own Bot API endpoint.
+
+❓ **Getting "Chat not found" error?**
+- Make sure you have sent a message to your bot first.
+- Use [this tool](https://telegram.me/userinfobot) to get your Chat ID.
 
 ## 🧪 Testing
 
