@@ -44,6 +44,8 @@ final class TelegramLogger
 
     private const int MAX_HEADER_LENGTH = 200;
 
+    private const int MAX_BOLD_LENGTH = 200;
+
     private const string ELLIPSIS = '…';
 
     private const string REDACTED = '[REDACTED]';
@@ -246,26 +248,54 @@ final class TelegramLogger
      */
     private static function buildText(string $level, string $message, array $context): string
     {
-        $application = mb_substr(self::configString('app.name'), 0, self::MAX_HEADER_LENGTH);
-        $environment = mb_substr(self::configString('app.env'), 0, self::MAX_HEADER_LENGTH);
-
-        $text = '🛠️ *Application:* '.self::escapeText($application)."\n";
-        $text .= '🌍 *Environment:* '.self::escapeText($environment)."\n\n";
-        $text .= (self::EMOJI[$level] ?? '📛').' *Level:* '.mb_strtoupper($level)."\n";
-
-        $footer = '⏳ *Time:* '.self::escapeText(date('Y-m-d H:i:s'));
+        $text = self::formatHeading($level);
 
         $exception = $context['exception'] ?? null;
+        $footer = self::formatMeta();
 
         if ($exception instanceof Throwable) {
             $text .= self::formatException($message, $exception);
         } else {
-            $text .= '📝 *Message:* `'.self::fitCode($message, self::MAX_MESSAGE_LENGTH)."`\n\n";
+            $text .= self::formatSummary($message);
             $text .= self::formatCaller();
-            $text .= self::formatContext($context, self::MAX_TEXT_LENGTH - mb_strlen($text) - mb_strlen($footer));
+            $text .= $footer;
+            $text .= self::formatContext($context, self::MAX_TEXT_LENGTH - mb_strlen($text));
+
+            return self::fitWithin($text, '');
         }
 
-        return self::fitWithin($text, $footer);
+        return self::fitWithin($text.$footer, '');
+    }
+
+    private static function formatSummary(string $message): string
+    {
+        $summary = self::escapeText(self::fit($message, self::MAX_MESSAGE_LENGTH));
+
+        return mb_strlen($message) > self::MAX_BOLD_LENGTH
+            ? $summary."\n\n"
+            : '*'.$summary."*\n\n";
+    }
+
+    private static function formatHeading(string $level): string
+    {
+        $application = mb_substr(self::configString('app.name'), 0, self::MAX_HEADER_LENGTH);
+        $environment = mb_substr(self::configString('app.env'), 0, self::MAX_HEADER_LENGTH);
+
+        $parts = array_filter([mb_strtoupper($level), $application, $environment], static fn (string $part): bool => $part !== '');
+
+        return (self::EMOJI[$level] ?? '📛').' *'.self::escapeText(implode(' | ', $parts))."*\n";
+    }
+
+    private static function formatMeta(): string
+    {
+        return '🕑 `'.self::escapeCode(date('H:i:s'))."`\n";
+    }
+
+    private static function fit(string $text, int $budget): string
+    {
+        return mb_strlen($text) > $budget
+            ? mb_substr($text, 0, max(0, $budget - 1)).self::ELLIPSIS
+            : $text;
     }
 
     private static function fitWithin(string $text, string $footer): string
@@ -292,14 +322,13 @@ final class TelegramLogger
         $text = '';
 
         if ($message !== $throwable->getMessage()) {
-            $text .= '📝 *Message:* `'.self::fitCode($message, self::MAX_MESSAGE_LENGTH)."`\n\n";
+            $text .= self::formatSummary($message);
         }
 
-        $text .= '🔥 *Exception:* `'.self::escapeCode($throwable::class)."`\n";
-        $text .= '💥 *Message:* `'.self::fitCode($errorMessage, self::MAX_MESSAGE_LENGTH)."`\n\n";
-        $text .= "📌 *File:* ```\n".self::escapeCode($file)."```\n";
+        $text .= '💥 `'.self::escapeCode($throwable::class)."`\n";
+        $text .= self::escapeText(self::fit($errorMessage, self::MAX_MESSAGE_LENGTH))."\n\n";
 
-        return $text.('🎯 *Line:* `'.self::escapeCode($line)."`\n\n");
+        return $text.self::formatLocation($file, $line);
     }
 
     private static function formatCaller(): string
@@ -321,11 +350,26 @@ final class TelegramLogger
                 continue;
             }
 
-            return "📌 *File:* ```\n".self::escapeCode($frame['file'])."```\n"
-                .'🎯 *Line:* `'.($frame['line'] ?? 0)."`\n\n";
+            return self::formatLocation($frame['file'], (string) ($frame['line'] ?? 0));
         }
 
         return '';
+    }
+
+    private static function formatLocation(string $file, string $line): string
+    {
+        return '📍 `'.self::escapeCode(self::relativePath($file).':'.$line)."`\n";
+    }
+
+    private static function relativePath(string $file): string
+    {
+        $base = self::configString('telegram-logger.base_path');
+
+        if ($base === '' || ! str_starts_with($file, $base)) {
+            return $file;
+        }
+
+        return mb_ltrim(mb_substr($file, mb_strlen($base)), '/\\');
     }
 
     private static function isInternalFrame(string $file): bool
@@ -344,8 +388,8 @@ final class TelegramLogger
             return '';
         }
 
-        $prefix = "📂 *Context:* ```\n";
-        $suffix = "```\n\n";
+        $prefix = "\n```json\n";
+        $suffix = '```';
 
         $budget -= mb_strlen($prefix) + mb_strlen($suffix);
 

@@ -13,10 +13,10 @@ it('renders an exception from the context', function (): void {
     Log::error('Unhandled exception occurred', ['exception' => $exception]);
 
     expect(sentText())
-        ->toContain('🔥 *Exception:* `RuntimeException`')
+        ->toContain('💥 `RuntimeException`')
         ->toContain('Database connection failed')
         ->toContain('Unhandled exception occurred')
-        ->toContain('🎯 *Line:* `'.$exception->getLine().'`');
+        ->toContain(':'.$exception->getLine().'`');
 });
 
 it('does not repeat the message when it equals the exception message', function (): void {
@@ -36,7 +36,7 @@ it('points at the call site of a php type error', function (): void {
 
     expect(sentText())
         ->toContain('/app/Http/Controllers/UserController.php')
-        ->toContain('🎯 *Line:* `42`');
+        ->toContain('UserController.php:42');
 
     expect(sentText())->not->toContain('called in');
 });
@@ -49,7 +49,7 @@ it('survives a malformed called-in suffix', function (): void {
     Log::error('malformed', ['exception' => $exception]);
 
     expect(FakeTelegram::requestCount())->toBe(1)
-        ->and(sentText())->toContain('🎯 *Line:* `'.$exception->getLine().'`');
+        ->and(sentText())->toContain(':'.$exception->getLine().'`');
 });
 
 it('truncates a very long exception message', function (): void {
@@ -66,6 +66,6 @@ it('ignores a non-throwable exception key', function (): void {
     Log::error('not really an exception', ['exception' => 'just a string']);
 
     expect(sentText())
-        ->not->toContain('🔥 *Exception:*')
-        ->toContain('📂 *Context:*');
+        ->not->toContain('💥 `')
+        ->toContain('```json');
 });

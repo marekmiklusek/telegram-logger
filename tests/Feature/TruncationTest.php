@@ -56,7 +56,7 @@ it('still appends the timestamp to a truncated message', function (): void {
 
     Log::error(str_repeat('a', 20_000));
 
-    expect(sentText())->toContain('⏳ *Time:*');
+    expect(sentText())->toContain('🕑 ');
 });
 
 it('caps the message so the context still fits', function (): void {

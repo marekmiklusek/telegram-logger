@@ -111,5 +111,5 @@ it('leaves the exception in the context usable', function (): void {
 
     Log::error('failed', ['exception' => new RuntimeException('boom')]);
 
-    expect(sentText())->toContain('🔥 *Exception:* `RuntimeException`');
+    expect(sentText())->toContain('💥 `RuntimeException`');
 });

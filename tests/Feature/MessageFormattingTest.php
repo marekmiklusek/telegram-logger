@@ -12,7 +12,7 @@ it('renders the level with its emoji', function (string $level, string $emoji): 
 
     Log::{$level}('levelled');
 
-    expect(sentText())->toContain($emoji.' *Level:* '.mb_strtoupper($level));
+    expect(sentText())->toContain($emoji.' *'.mb_strtoupper($level).' \| Testing App \| testing*');
 })->with([
     ['emergency', '🆘'],
     ['alert', '🚨'],
@@ -94,7 +94,7 @@ it('survives invalid utf-8 in the context payload', function (): void {
     Log::error('binary', ['blob' => "\xB1\x31"]);
 
     expect(FakeTelegram::requestCount())->toBe(1)
-        ->and(sentText())->toContain('Context:')
+        ->and(sentText())->toContain('```json')
         ->and(mb_check_encoding(sentText(), 'UTF-8'))->toBeTrue();
 });
 
@@ -104,7 +104,7 @@ it('renders the context as pretty printed json', function (): void {
     Log::error('with context', ['user_id' => 42, 'action' => 'login']);
 
     expect(sentText())
-        ->toContain('📂 *Context:*')
+        ->toContain('```json')
         ->toContain('"user_id": 42')
         ->toContain('"action": "login"');
 });
@@ -114,7 +114,25 @@ it('omits the context block when there is no context', function (): void {
 
     Log::error('bare');
 
-    expect(sentText())->not->toContain('📂 *Context:*');
+    expect(sentText())->not->toContain('```json');
+});
+
+it('renders a short message in bold', function (): void {
+    FakeTelegram::respondOk();
+
+    Log::error('short and loud');
+
+    expect(sentText())->toContain('*short and loud*');
+});
+
+it('renders a long message without bold', function (): void {
+    FakeTelegram::respondOk();
+
+    $message = str_repeat('word ', 60);
+
+    Log::error($message);
+
+    expect(sentText())->not->toContain('*'.mb_trim($message).'*');
 });
 
 it('reports the calling file and line for plain messages', function (): void {
@@ -123,9 +141,8 @@ it('reports the calling file and line for plain messages', function (): void {
     Log::error('who called me');
 
     expect(sentText())
-        ->toContain('📌 *File:*')
-        ->toContain(str_replace('\\', '\\\\', __FILE__))
-        ->toContain('🎯 *Line:*');
+        ->toContain('📍 ')
+        ->toContain(str_replace('\\', '\\\\', __FILE__));
 });
 
 it('appends the timestamp', function (): void {
@@ -133,5 +150,5 @@ it('appends the timestamp', function (): void {
 
     Log::error('when');
 
-    expect(sentText())->toMatch('/⏳ \*Time:\* \d{4}\\\\-\d{2}\\\\-\d{2} \d{2}:\d{2}:\d{2}$/u');
+    expect(sentText())->toMatch('/🕑 `\d{2}:\d{2}:\d{2}`/u');
 });

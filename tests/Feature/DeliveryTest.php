@@ -22,8 +22,8 @@ it('retries as plain text when telegram rejects the formatting', function (): vo
 
     expect(FakeTelegram::requestCount())->toBe(2)
         ->and(hasSentParam('parse_mode', 1))->toBeFalse()
-        ->and(sentText(1))->not->toContain('\\*Level:\\*')
-        ->and(sentText(1))->toContain('*Level:*');
+        ->and(sentText(1))->not->toContain('\\*ERROR')
+        ->and(sentText(1))->toContain('*ERROR');
 });
 
 it('keeps the silent flag on the plain text retry', function (): void {

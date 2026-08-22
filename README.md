@@ -1,4 +1,4 @@
-![blog-featured-how-to-delete-telegram](https://github.com/user-attachments/assets/78d2e1ec-7b2d-4e59-9b07-45a08aec6a56)
+![Laravel Telegram Logger](art/banner.svg)
 
 # 📢 Laravel Telegram Logger
 
@@ -71,6 +71,7 @@ return [
     'is_enabled' => (bool) env('TELEGRAM_LOG_ENABLED', true),
     'throw_on_failure' => (bool) env('TELEGRAM_LOG_THROW_ON_FAILURE', false),
     'api_url' => (string) env('TELEGRAM_LOG_API_URL', 'https://api.telegram.org'),
+    'base_path' => base_path(),
     'max_per_minute' => (int) env('TELEGRAM_LOG_MAX_PER_MINUTE', 20),
     'dedupe_seconds' => (int) env('TELEGRAM_LOG_DEDUPE_SECONDS', 60),
     'redact_keys' => ['password', 'secret', 'token', 'authorization', 'api_key', 'apikey', 'credit_card', 'cvv'],
@@ -119,42 +120,29 @@ The package listens to Laravel's logging events and sends structured messages to
 ### Example Telegram Log Output
 
 ```
-🛠️ Application: MyLaravelApp
-🌍 Environment: production
+❌ ERROR | MyLaravelApp | production
+User not found
 
-❌ Level: ERROR
-📝 Message: User not found
+📍 app/Http/Controllers/UserController.php:45
+🕑 10:15:30
 
-📌 File:
-/var/www/html/app/Http/Controllers/UserController.php
-🎯 Line: 45
-
-📂 Context:
 {
     "user_id": 42,
     "action": "login"
 }
-
-⏳ Time: 2025-02-19 10:15:30
 ```
 
 ### Example Telegram Log Output (Exception)
 
 ```
-🛠️ Application: MyLaravelApp
-🌍 Environment: production
+❌ ERROR | MyLaravelApp | production
+Unhandled exception occurred
 
-❌ Level: ERROR
-📝 Message: Unhandled exception occurred
+💥 PDOException
+Database connection failed!
 
-🔥 Exception: PDOException
-💥 Message: Database connection failed!
-
-📌 File:
-/var/www/html/app/Services/DatabaseService.php
-🎯 Line: 30
-
-⏳ Time: 2025-02-19 10:18:45
+📍 app/Services/DatabaseService.php:30
+🕑 10:18:45
 ```
 
 ## 🎯 Advanced Configuration
@@ -260,7 +248,6 @@ Log::error('Login failed', ['email' => 'a@b.com', 'password' => 'hunter2']);
 ```
 
 ```
-📂 Context:
 {
     "email": "a@b.com",
     "password": "[REDACTED]"

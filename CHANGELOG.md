@@ -53,6 +53,7 @@ trace, and raises the minimum PHP and Laravel versions.
 - `throw_on_failure` surfaces delivery errors instead of swallowing them — useful
   in local development.
 - `api_url` for routing through a proxy or a self-hosted Bot API instance.
+- `base_path` to control which prefix is stripped from file paths.
 - Automatic plain text retry: when Telegram rejects the formatting with HTTP 400,
   the message is resent unformatted rather than lost.
 - The exception class name is now shown alongside the exception message.
@@ -62,6 +63,10 @@ trace, and raises the minimum PHP and Laravel versions.
 
 ### Changed
 
+- Messages have a new layout. The level, application name and environment now share
+  a single heading line, the message itself is the second line, and file and line
+  are shown as one `path:line` entry relative to the application root. Context is
+  rendered as a syntax-highlighted JSON block.
 - Requires PHP `^8.4` and Laravel `^13.0`.
 - Depends on `illuminate/support` and `illuminate/contracts` instead of the full
   `laravel/framework`.

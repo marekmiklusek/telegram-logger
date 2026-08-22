@@ -38,7 +38,7 @@ it('reports the first application frame', function (): void {
 
     expect(callPrivate('formatFrames', $frames))
         ->toContain('/app/app/Services/Billing.php')
-        ->toContain('🎯 *Line:* `88`');
+        ->toContain(':88`');
 });
 
 it('returns nothing when every frame is internal', function (): void {
@@ -53,7 +53,25 @@ it('returns nothing when every frame is internal', function (): void {
 
 it('defaults the line number when a frame has none', function (): void {
     expect(callPrivate('formatFrames', [['file' => '/app/app/Console/Kernel.php']]))
-        ->toContain('🎯 *Line:* `0`');
+        ->toContain(':0`');
+});
+
+it('shortens a path inside the application', function (): void {
+    $absolute = base_path('app/Services/Billing.php');
+
+    expect(callPrivateString('relativePath', $absolute))
+        ->toBe('app/Services/Billing.php');
+});
+
+it('keeps a path outside the application untouched', function (): void {
+    expect(callPrivateString('relativePath', '/somewhere/else/File.php'))
+        ->toBe('/somewhere/else/File.php');
+});
+
+it('keeps the path when no base path is configured', function (): void {
+    config()->set('telegram-logger.base_path', '');
+
+    expect(callPrivateString('relativePath', '/any/File.php'))->toBe('/any/File.php');
 });
 
 it('recognises internal frames', function (string $file): void {
