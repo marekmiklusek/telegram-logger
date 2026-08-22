@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace MarekMiklusek\TelegramLogger;
 
-use RuntimeException;
 use Throwable;
+use RuntimeException;
 
 final class TelegramLogger
 {
     /**
      * @var array<string, int>
      */
-    public const LEVELS = [
+    public const array LEVELS = [
         'emergency' => 0,
         'alert' => 1,
         'critical' => 2,
@@ -26,7 +26,7 @@ final class TelegramLogger
     /**
      * @var array<string, string>
      */
-    private const EMOJI = [
+    private const array EMOJI = [
         'emergency' => '🆘',
         'alert' => '🚨',
         'critical' => '🚑',
@@ -37,19 +37,22 @@ final class TelegramLogger
         'debug' => '🔍',
     ];
 
-    private const MAX_TEXT_LENGTH = 4096;
+    private const int MAX_TEXT_LENGTH = 4096;
 
-    private const MAX_MESSAGE_LENGTH = 1500;
+    private const int MAX_MESSAGE_LENGTH = 1500;
 
-    private const ELLIPSIS = '…';
+    private const int MAX_HEADER_LENGTH = 200;
 
-    private const API_URL = 'https://api.telegram.org/bot%s/sendMessage';
+    private const string ELLIPSIS = '…';
 
-    private const JSON_FLAGS = JSON_PRETTY_PRINT
+    private const string API_URL = 'https://api.telegram.org/bot%s/sendMessage';
+
+    private const int JSON_FLAGS = JSON_PRETTY_PRINT
         | JSON_UNESCAPED_SLASHES
         | JSON_UNESCAPED_UNICODE
         | JSON_INVALID_UTF8_SUBSTITUTE
-        | JSON_PARTIAL_OUTPUT_ON_ERROR;
+        | JSON_PARTIAL_OUTPUT_ON_ERROR
+        | JSON_THROW_ON_ERROR;
 
     private static bool $sending = false;
 
@@ -65,9 +68,9 @@ final class TelegramLogger
         self::$sending = true;
 
         try {
-            self::handle(strtolower($level), $message, $context);
+            self::handle(mb_strtolower($level), $message, $context);
         } catch (Throwable $throwable) {
-            if (config()->boolean('telegram-logger.throw_on_failure', false)) {
+            if (self::configBool('telegram-logger.throw_on_failure', false)) {
                 throw $throwable;
             }
         } finally {
@@ -80,10 +83,10 @@ final class TelegramLogger
      */
     private static function handle(string $level, string $message, array $context): void
     {
-        $botToken = config()->string('telegram-logger.bot_token', '');
-        $chatId = config()->string('telegram-logger.chat_id', '');
+        $botToken = self::configString('telegram-logger.bot_token');
+        $chatId = self::configString('telegram-logger.chat_id');
 
-        if (! config()->boolean('telegram-logger.is_enabled', true) || blank($botToken) || blank($chatId)) {
+        if (! self::configBool('telegram-logger.is_enabled', true) || blank($botToken) || blank($chatId)) {
             return;
         }
 
@@ -100,7 +103,7 @@ final class TelegramLogger
             return false;
         }
 
-        $configured = strtolower(config()->string('telegram-logger.level', 'error'));
+        $configured = mb_strtolower(self::configString('telegram-logger.level', 'error'));
 
         if (! isset(self::LEVELS[$configured])) {
             $configured = 'error';
@@ -114,9 +117,12 @@ final class TelegramLogger
      */
     private static function buildText(string $level, string $message, array $context): string
     {
-        $text = '🛠️ *Application:* '.self::escapeText(config()->string('app.name', ''))."\n";
-        $text .= '🌍 *Environment:* '.self::escapeText(config()->string('app.env', ''))."\n\n";
-        $text .= self::EMOJI[$level].' *Level:* '.strtoupper($level)."\n";
+        $application = mb_substr(self::configString('app.name'), 0, self::MAX_HEADER_LENGTH);
+        $environment = mb_substr(self::configString('app.env'), 0, self::MAX_HEADER_LENGTH);
+
+        $text = '🛠️ *Application:* '.self::escapeText($application)."\n";
+        $text .= '🌍 *Environment:* '.self::escapeText($environment)."\n\n";
+        $text .= (self::EMOJI[$level] ?? '📛').' *Level:* '.mb_strtoupper($level)."\n";
 
         $footer = '⏳ *Time:* '.self::escapeText(date('Y-m-d H:i:s'));
 
@@ -130,14 +136,25 @@ final class TelegramLogger
             $text .= self::formatContext($context, self::MAX_TEXT_LENGTH - mb_strlen($text) - mb_strlen($footer));
         }
 
+        return self::fitWithin($text, $footer);
+    }
+
+    private static function fitWithin(string $text, string $footer): string
+    {
+        $budget = self::MAX_TEXT_LENGTH - mb_strlen($footer);
+
+        if (mb_strlen($text) > $budget) {
+            $text = mb_substr($text, 0, max(0, $budget - 1)).self::ELLIPSIS;
+        }
+
         return $text.$footer;
     }
 
-    private static function formatException(string $message, Throwable $exception): string
+    private static function formatException(string $message, Throwable $throwable): string
     {
-        $errorMessage = $exception->getMessage();
-        $file = $exception->getFile();
-        $line = (string) $exception->getLine();
+        $errorMessage = $throwable->getMessage();
+        $file = $throwable->getFile();
+        $line = (string) $throwable->getLine();
 
         if (preg_match('/^(.*), called in (.+) on line (\d+)$/s', $errorMessage, $matches) === 1) {
             [, $errorMessage, $file, $line] = $matches;
@@ -145,30 +162,29 @@ final class TelegramLogger
 
         $text = '';
 
-        if ($message !== $exception->getMessage()) {
+        if ($message !== $throwable->getMessage()) {
             $text .= '📝 *Message:* `'.self::fitCode($message, self::MAX_MESSAGE_LENGTH)."`\n\n";
         }
 
-        $text .= '🔥 *Exception:* `'.self::escapeCode($exception::class)."`\n";
+        $text .= '🔥 *Exception:* `'.self::escapeCode($throwable::class)."`\n";
         $text .= '💥 *Message:* `'.self::fitCode($errorMessage, self::MAX_MESSAGE_LENGTH)."`\n\n";
         $text .= "📌 *File:* ```\n".self::escapeCode($file)."```\n";
-        $text .= '🎯 *Line:* `'.self::escapeCode($line)."`\n\n";
 
-        return $text;
+        return $text.('🎯 *Line:* `'.self::escapeCode($line)."`\n\n");
     }
 
     private static function formatCaller(): string
     {
-        foreach (debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 25) as $frame) {
-            if (! isset($frame['file'])) {
-                continue;
-            }
+        return self::formatFrames(debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 25));
+    }
 
-            if (
-                str_contains($frame['file'], 'vendor')
-                || str_contains($frame['file'], 'Illuminate')
-                || str_contains($frame['file'], 'TelegramLogger')
-            ) {
+    /**
+     * @param  list<array{file?: string, line?: int}>  $frames
+     */
+    private static function formatFrames(array $frames): string
+    {
+        foreach ($frames as $frame) {
+            if (! isset($frame['file']) || self::isInternalFrame($frame['file'])) {
                 continue;
             }
 
@@ -177,6 +193,13 @@ final class TelegramLogger
         }
 
         return '';
+    }
+
+    private static function isInternalFrame(string $file): bool
+    {
+        return str_contains($file, 'vendor')
+            || str_contains($file, 'Illuminate')
+            || str_contains($file, 'TelegramLogger');
     }
 
     /**
@@ -197,18 +220,12 @@ final class TelegramLogger
             return '';
         }
 
-        $json = json_encode($context, self::JSON_FLAGS);
-
-        if ($json === false) {
-            return '';
-        }
-
-        return $prefix.self::fitCode($json, $budget).$suffix;
+        return $prefix.self::fitCode(json_encode($context, self::JSON_FLAGS), $budget).$suffix;
     }
 
     private static function deliver(string $botToken, string $chatId, string $text): void
     {
-        $silent = config()->boolean('telegram-logger.silent_notification', false);
+        $silent = self::configBool('telegram-logger.silent_notification', false);
 
         $response = self::request($botToken, [
             'chat_id' => $chatId,
@@ -217,18 +234,18 @@ final class TelegramLogger
             'disable_notification' => $silent,
         ]);
 
-        if ($response['ok'] ?? false) {
+        if ($response !== null && $response['ok']) {
             return;
         }
 
-        if (($response['error_code'] ?? null) === 400) {
+        if ($response !== null && $response['error_code'] === 400) {
             $fallback = self::request($botToken, [
                 'chat_id' => $chatId,
                 'text' => mb_substr(self::stripMarkdown($text), 0, self::MAX_TEXT_LENGTH),
                 'disable_notification' => $silent,
             ]);
 
-            if ($fallback['ok'] ?? false) {
+            if ($fallback !== null && $fallback['ok']) {
                 return;
             }
 
@@ -240,7 +257,7 @@ final class TelegramLogger
 
     /**
      * @param  array<string, mixed>  $params
-     * @return array<string, mixed>|null
+     * @return array{ok: bool, error_code: int|null, description: string|null}|null
      */
     private static function request(string $botToken, array $params): ?array
     {
@@ -262,7 +279,29 @@ final class TelegramLogger
 
         $decoded = json_decode($body, true);
 
-        return is_array($decoded) ? $decoded : null;
+        if (! is_array($decoded)) {
+            return null;
+        }
+
+        return [
+            'ok' => (bool) ($decoded['ok'] ?? false),
+            'error_code' => is_int($decoded['error_code'] ?? null) ? $decoded['error_code'] : null,
+            'description' => is_string($decoded['description'] ?? null) ? $decoded['description'] : null,
+        ];
+    }
+
+    private static function configString(string $key, string $default = ''): string
+    {
+        $value = config($key, $default);
+
+        return is_string($value) ? $value : $default;
+    }
+
+    private static function configBool(string $key, bool $default): bool
+    {
+        $value = config($key, $default);
+
+        return is_bool($value) ? $value : $default;
     }
 
     /**

@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace MarekMiklusek\TelegramLogger;
 
-use Illuminate\Log\Events\MessageLogged;
+use InvalidArgumentException;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
-use InvalidArgumentException;
+use Illuminate\Log\Events\MessageLogged;
 
 final class TelegramLoggerServiceProvider extends ServiceProvider
 {
-    private const CONFIG_NAME = 'telegram-logger';
+    private const string CONFIG_NAME = 'telegram-logger';
 
     public function register(): void
     {
@@ -28,20 +28,23 @@ final class TelegramLoggerServiceProvider extends ServiceProvider
 
         $this->validateLevel();
 
-        Event::listen(MessageLogged::class, static function (MessageLogged $event): void {
-            TelegramLogger::send($event->level, $event->message, $event->context);
+        Event::listen(MessageLogged::class, static function (MessageLogged $messageLogged): void {
+            /** @var array<string, mixed> $context */
+            $context = $messageLogged->context;
+
+            TelegramLogger::send($messageLogged->level, $messageLogged->message, $context);
         });
     }
 
     private function validateLevel(): void
     {
-        $level = config(self::CONFIG_NAME.'.level', 'error');
+        $level = config()->string(self::CONFIG_NAME.'.level', 'error');
 
-        if (! is_string($level) || ! array_key_exists(strtolower($level), TelegramLogger::LEVELS)) {
+        if (! array_key_exists(mb_strtolower($level), TelegramLogger::LEVELS)) {
             throw new InvalidArgumentException(sprintf(
                 'Invalid %s.level [%s]. Allowed values: %s.',
                 self::CONFIG_NAME,
-                is_string($level) ? $level : get_debug_type($level),
+                $level,
                 implode(', ', array_keys(TelegramLogger::LEVELS)),
             ));
         }

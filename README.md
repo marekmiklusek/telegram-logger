@@ -16,6 +16,11 @@
 
 ---
 
+## 📋 Requirements
+
+- PHP 8.4+
+- Laravel 13.0+
+
 ## 🛠 Installation
 
 Require the package via Composer:
@@ -56,9 +61,9 @@ TELEGRAM_LOG_THROW_ON_FAILURE=false
 
 ```php
 return [
-    'bot_token' => env('TELEGRAM_BOT_TOKEN'),
-    'chat_id' => env('TELEGRAM_CHAT_ID'),
-    'level' => env('TELEGRAM_LOG_LEVEL', 'error'),
+    'bot_token' => (string) env('TELEGRAM_BOT_TOKEN', ''),
+    'chat_id' => (string) env('TELEGRAM_CHAT_ID', ''),
+    'level' => (string) env('TELEGRAM_LOG_LEVEL', 'error'),
     'silent_notification' => (bool) env('TELEGRAM_LOG_SILENT', false),
     'is_enabled' => (bool) env('TELEGRAM_LOG_ENABLED', true),
     'throw_on_failure' => (bool) env('TELEGRAM_LOG_THROW_ON_FAILURE', false),
@@ -215,6 +220,32 @@ php artisan config:cache
 ❓ **Getting "Chat not found" error?**
 - Make sure you have sent a message to your bot first.
 - Use [this tool](https://telegram.me/userinfobot) to get your Chat ID.
+
+## 🧪 Testing
+
+```bash
+composer test
+```
+
+This runs the full quality chain: Pint, Rector, PHPStan (level max),
+100% type coverage and the test suite with 100% code coverage.
+
+Individual steps:
+
+```bash
+composer test:lint           # Pint code style check
+composer test:refactor       # Rector dry run
+composer test:types          # PHPStan level max
+composer test:type-coverage  # 100% type coverage
+composer test:unit           # Pest with 100% code coverage
+```
+
+To apply automatic fixes:
+
+```bash
+composer lint       # Pint
+composer refactor   # Rector
+```
 
 ## 📜 License
 
