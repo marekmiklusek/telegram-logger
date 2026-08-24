@@ -325,8 +325,8 @@ final class TelegramLogger
             $text .= self::formatSummary($message);
         }
 
-        $text .= '💥 `'.self::escapeCode($throwable::class)."`\n";
-        $text .= self::escapeText(self::fit($errorMessage, self::MAX_MESSAGE_LENGTH))."\n\n";
+        $text .= '💥 `'.self::escapeCode(class_basename($throwable))."`\n";
+        $text .= self::formatSummary($errorMessage);
 
         return $text.self::formatLocation($file, $line);
     }
