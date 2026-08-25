@@ -1,29 +1,32 @@
-![Laravel Telegram Logger](art/banner.svg)
+<p align="center">
+  <img src="art/banner.svg" alt="Laravel Telegram Logger" width="100%">
+</p>
 
-# Laravel Telegram Logger
+<p align="center">
+  <a href="https://github.com/marekmiklusek/telegram-logger/actions"><img src="https://github.com/marekmiklusek/telegram-logger/actions/workflows/tests.yml/badge.svg" alt="Tests"></a>
+  <a href="https://packagist.org/packages/marekmiklusek/telegram-logger"><img src="https://img.shields.io/packagist/v/marekmiklusek/telegram-logger.svg" alt="Latest Stable Version"></a>
+  <a href="https://packagist.org/packages/marekmiklusek/telegram-logger"><img src="https://img.shields.io/packagist/dt/marekmiklusek/telegram-logger.svg" alt="Downloads"></a>
+  <a href="https://github.com/marekmiklusek/telegram-logger/blob/main/LICENSE.md"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License"></a>
+</p>
 
-Sends Laravel log messages and exceptions to Telegram for real-time monitoring,
-with flood protection and redaction of sensitive context.
+Sends Laravel log messages and exceptions to Telegram for real-time monitoring, with flood protection and redaction of sensitive context.
 
-## 📌 Features
+## Features
+- Real-time logging to Telegram
+- Supports all log levels (`debug`, `info`, `warning`, `error`, etc.)
+- Automatic exception handling, capturing the file, line and message
+- Configurable log level filtering
+- Silent notifications, to avoid sound and vibration in Telegram
+- Flood protection and deduplication of repeated messages
+- Redaction of sensitive context before anything leaves the app
+- Fully tested: 100% code coverage and 100% type coverage
 
-✅ **Real-time logging** to Telegram  
-✅ **Supports all log levels** (`debug`, `info`, `warning`, `error`, etc.)  
-✅ **Automatic exception handling** (captures error file, line, and message)  
-✅ **Configurable log level filtering**  
-✅ **Silent notifications support** (to avoid sound/vibration in Telegram)  
-✅ **Minimal setup, easy to integrate**  
-✅ **Can be enabled/disabled via configuration**
-
----
-
-## 📋 Requirements
-
+## Requirements
 - PHP 8.4+
 - Laravel 13.0+
 - `allow_url_fopen` enabled in `php.ini` (the default)
 
-## 🛠 Installation
+## Installation
 
 Require the package via Composer:
 
@@ -31,7 +34,7 @@ Require the package via Composer:
 composer require marekmiklusek/telegram-logger
 ```
 
-## 🔧 Configuration
+## Configuration
 
 Publish the package configuration:
 
@@ -79,7 +82,7 @@ return [
 ];
 ```
 
-## 🏗 Usage
+## Usage
 
 ### Basic Logging
 
@@ -114,7 +117,7 @@ try {
 }
 ```
 
-## ⚙ How It Works
+## How It Works
 
 The package listens to Laravel's logging events and sends structured messages to Telegram.
 
@@ -146,7 +149,7 @@ Database connection failed!
 🕑 10:18:45
 ```
 
-## 🎯 Advanced Configuration
+## Advanced Configuration
 
 ### 1️⃣ Logger Enablement
 
@@ -188,7 +191,7 @@ return [
 
 ### 4️⃣ Failure Reporting
 
-By default a failed delivery is swallowed — a logger must never break the application:
+By default a failed delivery is swallowed, because a logger must never break the application:
 ```php
 return [
     'throw_on_failure' => false,
@@ -237,10 +240,10 @@ Keys are matched case-insensitively as a substring, so `password` also covers
 `password_confirmation`. Nested arrays are redacted too. Configure the list via
 `redact_keys`, or set it to `[]` to disable redaction.
 
-## 💡 Troubleshooting
+## Troubleshooting
 
 ❓ **Logs not appearing in Telegram?**
-1. Set `TELEGRAM_LOG_THROW_ON_FAILURE=true` — the real API error will be thrown.
+1. Set `TELEGRAM_LOG_THROW_ON_FAILURE=true`, so the real API error is thrown.
 2. Check that your `.env` values are correctly set:
 ```bash
 php artisan config:clear
@@ -248,7 +251,7 @@ php artisan config:cache
 ```
 3. Ensure your bot has permission to send messages to your chat.
 4. Verify `TELEGRAM_LOG_LEVEL` is not more severe than the level you are logging.
-5. Confirm `allow_url_fopen` is enabled — without it the API cannot be reached and
+5. Confirm `allow_url_fopen` is enabled. Without it the API cannot be reached and
    the package throws `Telegram API is unreachable`.
 
 ❓ **Behind a proxy?**
@@ -259,7 +262,7 @@ Point `TELEGRAM_LOG_API_URL` at your own Bot API endpoint.
 - Make sure you have sent a message to your bot first.
 - Use [this tool](https://telegram.me/userinfobot) to get your Chat ID.
 
-## 🧪 Testing
+## Testing
 
 ```bash
 composer test
@@ -285,10 +288,10 @@ composer lint       # Pint
 composer refactor   # Rector
 ```
 
-## 📝 Changelog
+## Changelog
 
 See [CHANGELOG.md](CHANGELOG.md) for release notes and upgrade instructions.
 
-## 📜 License
+## License
 
-This package is open-source and licensed under the [MIT License](LICENSE).
+This package is open-source and licensed under the [MIT License](LICENSE.md).
