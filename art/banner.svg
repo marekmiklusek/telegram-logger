@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 480" width="1280" height="480" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 400" width="1280" height="400" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Roboto, sans-serif">
   <defs>
     <linearGradient id="sky" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0%" stop-color="#1b2735"/>
@@ -14,11 +14,11 @@
     </filter>
   </defs>
 
-  <rect width="1280" height="480" fill="url(#sky)"/>
-  <circle cx="1140" cy="70" r="150" fill="#38bdf8" opacity="0.06"/>
-  <circle cx="120" cy="430" r="180" fill="#0ea5e9" opacity="0.05"/>
+  <rect width="1280" height="400" fill="url(#sky)"/>
+  <circle cx="1140" cy="58" r="140" fill="#38bdf8" opacity="0.06"/>
+  <circle cx="110" cy="368" r="150" fill="#0ea5e9" opacity="0.05"/>
 
-  <g transform="translate(80, 108)">
+  <g transform="translate(80, 104)">
     <text x="0" y="0" fill="#e2e8f0" font-size="52" font-weight="700" letter-spacing="-0.5">Laravel Telegram Logger</text>
     <rect x="2" y="24" width="86" height="4" rx="2" fill="url(#accent)"/>
     <text x="0" y="76" fill="#94a3b8" font-size="22" font-weight="400">Laravel logs and exceptions,</text>
@@ -40,8 +40,8 @@
     </g>
   </g>
 
-  <g transform="translate(690, 96)" filter="url(#lift)">
-    <rect width="510" height="288" rx="20" fill="#ffffff"/>
+  <g transform="translate(742, 74)" filter="url(#lift)">
+    <rect width="458" height="268" rx="18" fill="#ffffff"/>
 
     <g transform="translate(30, 52)">
       <text x="0" y="0" font-size="19">❌</text>
@@ -62,7 +62,7 @@
     </g>
 
     <g transform="translate(30, 172)">
-      <rect width="450" height="88" rx="10" fill="#eef2f6"/>
+      <rect width="398" height="82" rx="10" fill="#eef2f6"/>
       <text x="16" y="24" fill="#64748b" font-size="13" font-family="ui-monospace, monospace">json</text>
       <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="13.5">
         <text x="16" y="48" fill="#b45309">"order_id"</text>
