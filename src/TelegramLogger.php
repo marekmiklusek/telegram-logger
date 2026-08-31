@@ -317,6 +317,8 @@ final class TelegramLogger
 
         if (preg_match('/^(.*), called in (.+) on line (\d+)$/s', $errorMessage, $matches) === 1) {
             [, $errorMessage, $file, $line] = $matches;
+        } elseif (self::isInternalFrame($file)) {
+            [$file, $line] = self::applicationFrame($throwable->getTrace(), $file, $line);
         }
 
         $text = '';
@@ -369,7 +371,27 @@ final class TelegramLogger
             return $file;
         }
 
-        return mb_ltrim(mb_substr($file, mb_strlen($base)), '/\\');
+        return self::normalise(mb_ltrim(mb_substr($file, mb_strlen($base)), '/\\'));
+    }
+
+    private static function normalise(string $path): string
+    {
+        return str_replace('\\', '/', $path);
+    }
+
+    /**
+     * @param  list<array{file?: string, line?: int}>  $frames
+     * @return array{0: string, 1: string}
+     */
+    private static function applicationFrame(array $frames, string $file, string $line): array
+    {
+        foreach ($frames as $frame) {
+            if (isset($frame['file']) && ! self::isInternalFrame($frame['file'])) {
+                return [$frame['file'], (string) ($frame['line'] ?? 0)];
+            }
+        }
+
+        return [$file, $line];
     }
 
     private static function isInternalFrame(string $file): bool

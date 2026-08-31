@@ -56,11 +56,55 @@ it('defaults the line number when a frame has none', function (): void {
         ->toContain(':0`');
 });
 
-it('shortens a path inside the application', function (): void {
+it('strips the base path from a path inside the application', function (): void {
     $absolute = base_path('app/Services/Billing.php');
 
     expect(callPrivateString('relativePath', $absolute))
         ->toBe('app/Services/Billing.php');
+});
+
+it('keeps a long path in full so the file stays findable', function (): void {
+    $long = base_path('vendor/laravel/framework/src/Illuminate/Support/helpers.php');
+
+    expect(callPrivateString('relativePath', $long))
+        ->toBe('vendor/laravel/framework/src/Illuminate/Support/helpers.php');
+});
+
+it('keeps a short path in full', function (): void {
+    $short = base_path('app/Http/Controllers/WebhookController.php');
+
+    expect(callPrivateString('relativePath', $short))
+        ->toBe('app/Http/Controllers/WebhookController.php');
+});
+
+it('normalises windows separators', function (): void {
+    expect(callPrivateString('normalise', 'app\Http\Controllers\Foo.php'))
+        ->toBe('app/Http/Controllers/Foo.php');
+});
+
+it('prefers the first application frame of an exception', function (): void {
+    $frames = [
+        ['file' => '/app/vendor/laravel/framework/src/Log.php', 'line' => 10],
+        ['function' => 'call_user_func'],
+        ['file' => '/app/app/Services/Shoptet/Client.php', 'line' => 88],
+    ];
+
+    expect(callPrivate('applicationFrame', $frames, '/fallback.php', '1'))
+        ->toBe(['/app/app/Services/Shoptet/Client.php', '88']);
+});
+
+it('falls back when the exception trace has no application frame', function (): void {
+    $frames = [['file' => '/app/vendor/foo/bar.php', 'line' => 3]];
+
+    expect(callPrivate('applicationFrame', $frames, '/fallback.php', '7'))
+        ->toBe(['/fallback.php', '7']);
+});
+
+it('defaults the line of an application frame without one', function (): void {
+    $frames = [['file' => '/app/app/Console/Kernel.php']];
+
+    expect(callPrivate('applicationFrame', $frames, '/fallback.php', '1'))
+        ->toBe(['/app/app/Console/Kernel.php', '0']);
 });
 
 it('keeps a path outside the application untouched', function (): void {

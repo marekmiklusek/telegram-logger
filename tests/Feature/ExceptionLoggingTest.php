@@ -6,6 +6,11 @@ use Illuminate\Support\Facades\Log;
 use MarekMiklusek\TelegramLogger\Tests\FakeTelegram;
 use Illuminate\Contracts\Container\BindingResolutionException;
 
+function makeException(): RuntimeException
+{
+    return new RuntimeException('thrown deep inside a package');
+}
+
 it('renders an exception from the context', function (): void {
     FakeTelegram::respondOk();
 
@@ -18,6 +23,21 @@ it('renders an exception from the context', function (): void {
         ->toContain('Database connection failed')
         ->toContain('Unhandled exception occurred')
         ->toContain(':'.$exception->getLine().'`');
+});
+
+it('points at application code when the exception came from vendor', function (): void {
+    FakeTelegram::respondOk();
+
+    $runtimeException = makeException();
+
+    $file = new ReflectionProperty(RuntimeException::class, 'file');
+    $file->setValue($runtimeException, base_path('vendor/laravel/framework/src/Illuminate/Support/helpers.php'));
+
+    Log::error('vendor origin', ['exception' => $runtimeException]);
+
+    expect(sentText())->toContain('ExceptionLoggingTest.php');
+
+    expect(sentText())->not->toContain('helpers.php');
 });
 
 it('shortens a namespaced exception class', function (): void {
